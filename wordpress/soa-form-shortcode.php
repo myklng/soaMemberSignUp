@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Format: https://raw.githubusercontent.com/{user}/{repo}/{branch}/wordpress/soa-signup-form.html
  */
 define( 'SOA_FORM_GITHUB_RAW_URL',
-    'https://raw.githubusercontent.com/YOUR_GITHUB_USER/YOUR_REPO/main/wordpress/soa-signup-form.html'
+    'https://raw.githubusercontent.com/myklng/soaMemberSignUp/main/soa-signup-form.html'
 );
 
 /**
