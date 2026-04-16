@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.0.0
+  Version : 1.1.0
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -13,10 +13,14 @@
      STYLES  (scoped to .soa-form-wrapper — safe inside WordPress)
      ============================================================ -->
 <style>
-/* ----- Reset ----- */
+/* ----- Reset — cancel common WP theme overrides ----- */
 .soa-form-wrapper *, .soa-form-wrapper *::before, .soa-form-wrapper *::after {
   box-sizing: border-box;
+  margin: 0;
 }
+/* WP themes often force margin-bottom on p tags and bold all labels */
+.soa-form-wrapper p   { margin: 0; }
+.soa-form-wrapper label { display: block; font-weight: inherit; margin: 0; }
 
 /* ----- CSS custom properties (scoped, not :root) ----- */
 .soa-form-wrapper {
@@ -148,39 +152,43 @@
   margin-top: 2px;
 }
 
-/* ----- Inputs ----- */
+/* ----- Inputs — hardened against WP theme overrides ----- */
 .soa-input,
 .soa-select,
 .soa-textarea {
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--soa-border);
-  border-radius: var(--soa-radius);
-  background: #fff;
-  font-family: inherit;
-  font-size: 14px;
-  color: inherit;
-  line-height: 1.5;
+  display: block !important;
+  width: 100% !important;
+  padding: 9px 12px !important;
+  border: 1px solid var(--soa-border) !important;
+  border-radius: var(--soa-radius) !important;
+  background: #fff !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+  color: inherit !important;
+  line-height: 1.5 !important;
+  box-shadow: none !important;
+  outline: none;
   transition: border-color .2s, box-shadow .2s;
   -webkit-appearance: none;
   appearance: none;
+  margin: 0 !important;
 }
 .soa-input:focus,
 .soa-select:focus,
 .soa-textarea:focus {
-  outline: none;
-  border-color: var(--soa-border-focus);
-  box-shadow: 0 0 0 3px rgba(13,115,119,.12);
+  outline: none !important;
+  border-color: var(--soa-border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(13,115,119,.12) !important;
 }
 .soa-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  padding-right: 34px !important;
   cursor: pointer;
 }
 .soa-textarea { resize: vertical; min-height: 90px; }
-.soa-input[readonly] { background: var(--soa-bg-alt); cursor: default; }
+.soa-input[readonly] { background: var(--soa-bg-alt) !important; cursor: default; }
 
 /* Error state */
 .soa-fg.has-error .soa-input,
@@ -276,12 +284,13 @@
   flex-direction: row; flex-wrap: wrap; gap: 16px;
 }
 .soa-radio-item, .soa-check-item {
-  display: flex; align-items: flex-start; gap: 9px;
+  display: flex !important; align-items: flex-start; gap: 9px;
   font-size: 14px; line-height: 1.4; cursor: pointer;
 }
 .soa-radio-item input, .soa-check-item input {
-  width: 15px; height: 15px; margin-top: 2px;
+  width: 15px !important; height: 15px !important; margin-top: 2px;
   accent-color: var(--soa-primary); cursor: pointer; flex-shrink: 0;
+  display: inline-block !important; padding: 0 !important; border: none !important;
 }
 
 /* ----- Membership tier cards ----- */
@@ -335,15 +344,7 @@
   background: none; border: none; cursor: pointer;
   color: var(--soa-error); font-size: 17px; line-height: 1; padding: 0 3px;
 }
-.soa-btn-add {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 16px;
-  background: #fff; border: 1px dashed var(--soa-primary);
-  border-radius: var(--soa-radius); color: var(--soa-primary);
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  font-family: inherit; transition: background .2s;
-}
-.soa-btn-add:hover { background: var(--soa-primary-lt); }
+/* .soa-btn-add defined above with WP-hardened !important rules */
 
 /* ----- Autocomplete ----- */
 .soa-ac-wrap { position: relative; }
@@ -372,18 +373,28 @@
 .soa-alert-error   { background: var(--soa-error-bg); border: 1px solid var(--soa-error-bd); color: var(--soa-error); }
 .soa-alert-success { background: var(--soa-success-bg); border: 1px solid #bbf7d0; color: #166534; }
 
-/* ----- Submit button ----- */
+/* ----- Submit button — hardened against WP theme button overrides ----- */
 .soa-submit-wrap { text-align: center; margin-top: 28px; }
 .soa-btn-submit {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 13px 36px;
-  background: var(--soa-primary); color: #fff;
-  border: none; border-radius: var(--soa-radius);
-  font-family: inherit; font-size: 15px; font-weight: 600;
+  display: inline-flex !important; align-items: center; gap: 8px;
+  padding: 13px 36px !important;
+  background: var(--soa-primary) !important; color: #fff !important;
+  border: none !important; border-radius: var(--soa-radius) !important;
+  font-family: inherit !important; font-size: 15px !important; font-weight: 600 !important;
   cursor: pointer; transition: background .2s, opacity .2s;
+  text-decoration: none !important; line-height: 1 !important;
 }
-.soa-btn-submit:hover   { background: var(--soa-primary-dk); }
+.soa-btn-submit:hover   { background: var(--soa-primary-dk) !important; }
 .soa-btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+.soa-btn-add {
+  display: inline-flex !important; align-items: center; gap: 6px;
+  padding: 7px 16px !important;
+  background: #fff !important; border: 1px dashed var(--soa-primary) !important;
+  border-radius: var(--soa-radius) !important; color: var(--soa-primary) !important;
+  font-size: 13px !important; font-weight: 500 !important; cursor: pointer;
+  font-family: inherit !important; transition: background .2s;
+}
+.soa-btn-add:hover { background: var(--soa-primary-lt) !important; }
 
 /* ----- Overlay / success ----- */
 .soa-overlay {
@@ -500,15 +511,15 @@
           <span class="soa-err" id="err-dob"></span>
         </div>
 
-        <!-- NRIC -->
+        <!-- NRIC — last 3 digits + letter -->
         <div class="soa-fg soa-col-4" id="fg-nric">
-          <label class="soa-label" for="nric">NRIC / FIN <span class="soa-req">*</span></label>
+          <label class="soa-label" for="nric">NRIC / FIN (last 3 digits + letter) <span class="soa-req">*</span></label>
           <input class="soa-input" type="text" id="nric" name="nric"
-                 placeholder="e.g. S1234567A" maxlength="9"
+                 placeholder="e.g. 567A" maxlength="4"
                  data-required="true"
-                 data-pattern="^[STFGM]\d{7}[A-Z]$"
+                 data-pattern="^\d{3}[A-Z]$"
                  data-err-required="NRIC / FIN is required."
-                 data-err-pattern="Format: S/T/F/G/M + 7 digits + letter (e.g. S1234567A)."
+                 data-err-pattern="Enter the last 3 digits followed by the letter (e.g. 567A)."
                  style="text-transform:uppercase" />
           <span class="soa-err" id="err-nric"></span>
         </div>
@@ -542,7 +553,9 @@
         <div class="soa-fg soa-col-6" id="fg-oob">
           <label class="soa-label" for="oob">OOB Registration No. <span class="soa-hint" style="font-weight:400">(if applicable)</span></label>
           <input class="soa-input" type="text" id="oob" name="oob"
-                 placeholder="Optometry Board of Singapore reg. no."
+                 placeholder="e.g. A12B3456C"
+                 data-pattern="^[A-Z](\d{2})[0-9A-Z](\d{4})[A-Z]$"
+                 data-err-pattern="Invalid OOB format. Expected format: A12B3456C"
                  style="text-transform:uppercase" />
           <span class="soa-err" id="err-oob"></span>
         </div>
@@ -1073,10 +1086,6 @@
          ══════════════════════════════════════════ -->
     <div class="soa-section" id="s-declaration">
       <h3 class="soa-section-hd">8 · Applicant Declaration</h3>
-      <div class="soa-note" style="margin-bottom:14px">
-        I declare that the particulars given above are true and correct.
-        I agree to be bound by the Constitution and By-Laws of SOA.
-      </div>
       <div class="soa-grid">
 
         <div class="soa-fg soa-col-6">
@@ -1085,27 +1094,19 @@
                  readonly placeholder="Auto-populated from §1" />
         </div>
 
-        <div class="soa-fg soa-col-12" id="fg-decl_sig">
-          <label class="soa-label">Handwritten Signature (upload scan) <span class="soa-req">*</span></label>
-          <div class="soa-file-zone"
-               data-field="declaration_signature" data-max-mb="1"
-               data-types="image/jpeg,image/png">
-            <input type="file" id="decl_sig_file" name="decl_sig_file"
-                   accept="image/jpeg,image/png"
+        <div class="soa-fg soa-col-12" id="fg-decl_agree">
+          <label class="soa-check-item" style="align-items:flex-start;gap:10px;cursor:pointer">
+            <input type="checkbox" id="decl_agree" name="decl_agree" value="true"
                    data-required="true"
-                   data-err-required="Please upload your signed declaration." />
-            <span class="soa-file-icon">✍️</span>
-            <span class="soa-file-copy">
-              <strong>Click to upload</strong> scanned / photographed signature<br>
-              JPEG or PNG · white background · max 1 MB · min 150 DPI
+                   data-err-required="You must confirm the declaration before submitting."
+                   style="margin-top:3px;flex-shrink:0" />
+            <span>
+              I declare that the particulars given above are true and correct, and I agree
+              to be bound by the Constitution and By-Laws of the Singapore Optometric Association.
+              <span class="soa-req">*</span>
             </span>
-          </div>
-          <div class="soa-file-preview" id="fp-decl_sig_file">
-            <img class="soa-file-preview-thumb" id="ft-decl_sig_file" alt="preview" />
-            <span class="soa-file-preview-name" id="fn-decl_sig_file"></span>
-            <button type="button" class="soa-file-rm" data-clears="decl_sig_file" aria-label="Remove">×</button>
-          </div>
-          <span class="soa-err" id="err-decl_sig_file"></span>
+          </label>
+          <span class="soa-err" id="err-decl_agree"></span>
         </div>
 
       </div>
@@ -1179,7 +1180,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.0.0</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.1.0</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -1543,10 +1544,24 @@ function syncDerivedNames() {
    ───────────────────────────────────────────────────────────── */
 function fetchSponsors() {
   if (!SOA_CONFIG.APPS_SCRIPT_URL || SOA_CONFIG.APPS_SCRIPT_URL.includes('YOUR_DEPLOYMENT_ID')) return;
-  fetch(SOA_CONFIG.APPS_SCRIPT_URL + '?action=getSponsors')
-    .then(r => r.json())
-    .then(data => { if (data.sponsors) sponsorList = data.sponsors; })
-    .catch(() => { /* silent — user can still type manually */ });
+  fetch(SOA_CONFIG.APPS_SCRIPT_URL + '?action=getSponsors', {
+    redirect: 'follow',   // Apps Script doGet returns a 302 redirect
+  })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(data => {
+      if (data.sponsors && data.sponsors.length) {
+        sponsorList = data.sponsors;
+        console.log('[SOA] Loaded ' + sponsorList.length + ' sponsor names.');
+      } else {
+        console.warn('[SOA] Sponsor list returned empty or unexpected:', data);
+      }
+    })
+    .catch(err => {
+      console.warn('[SOA] Could not load sponsor list (user can still type manually):', err.message);
+    });
 }
 
 function initAutocomplete() {
@@ -1874,7 +1889,8 @@ function collectPayload(signUpID) {
       },
     },
     declaration: {
-      name: $('decl_name').value.trim(),
+      name:   $('decl_name').value.trim(),
+      agreed: $('decl_agree').checked,
     },
     agreement: {
       name: $('agreement_name').value.trim(),
@@ -1897,12 +1913,6 @@ function collectFiles() {
       files[clean + '_signature'] = pad.toDataURL('image/png');
     }
   });
-
-  // Declaration signature file key normalisation
-  if (files['decl_sig_file']) {
-    files['declaration_signature'] = files['decl_sig_file'];
-    delete files['decl_sig_file'];
-  }
 
   return files;
 }
