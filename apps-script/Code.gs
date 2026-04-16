@@ -23,7 +23,7 @@
 const CONFIG = {
   SHEET_ID:        'YOUR_GOOGLE_SHEET_ID',         // TODO
   SHEET_A:         'Applications',                  // TODO: match your tab name
-  SHEET_B:         'Sponsors',                      // TODO: match your tab name
+  SHEET_B:         'MemberList',                      // TODO: match your tab name
   DRIVE_FOLDER_ID: 'YOUR_GOOGLE_DRIVE_FOLDER_ID',  // TODO
 };
 
