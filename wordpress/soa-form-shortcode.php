@@ -48,10 +48,10 @@ function soa_render_signup_form() {
     // Uncomment this block to cache the GitHub response and avoid hitting
     // GitHub's rate limits on high-traffic pages.
     //
-    // $cached = get_transient( $cache_key );
-    // if ( $cached !== false ) {
-    //     return $cached;
-    // }
+    $cached = get_transient( $cache_key );
+    if ( $cached !== false ) {
+        return $cached;
+    }
     // ────────────────────────────────────────────────────────────────────────
 
     $response = wp_remote_get(
@@ -88,9 +88,9 @@ function soa_render_signup_form() {
     // ── Cache the successful response ───────────────────────────────────────
     // Uncomment this block if you enabled caching above.
     //
-    // if ( SOA_FORM_CACHE_TTL > 0 ) {
-    //     set_transient( $cache_key, $html, SOA_FORM_CACHE_TTL );
-    // }
+    if ( SOA_FORM_CACHE_TTL > 0 ) {
+        set_transient( $cache_key, $html, SOA_FORM_CACHE_TTL );
+    }
     // ────────────────────────────────────────────────────────────────────────
 
     // Return raw HTML — WordPress will embed it into the page content.
