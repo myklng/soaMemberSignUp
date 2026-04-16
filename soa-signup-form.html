@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.2.0
+  Version : 1.2.1
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -383,6 +383,10 @@
 .soa-confirm-btn.confirmed {
   background: #f0fdf4 !important; border-color: #22c55e !important;
   color: #16a34a !important; cursor: default;
+}
+.soa-confirm-btn.unverified {
+  background: #fffbeb !important; border-color: #f59e0b !important;
+  color: #92400e !important; cursor: default;
 }
 
 /* ----- Alerts ----- */
@@ -1200,7 +1204,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.0</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.1</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -1220,7 +1224,7 @@
    ───────────────────────────────────────────────────────────── */
 const SOA_CONFIG = {
   // TODO: replace with your deployed Apps Script web-app URL
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
+  APPS_SCRIPT_URL: '%%SOA_APPS_SCRIPT_URL%%',
 };
 
 // TODO: fill in actual SGD fees for each tier
@@ -1563,7 +1567,10 @@ function syncDerivedNames() {
    Sponsor autocomplete
    ───────────────────────────────────────────────────────────── */
 function fetchSponsors() {
-  if (!SOA_CONFIG.APPS_SCRIPT_URL || SOA_CONFIG.APPS_SCRIPT_URL.includes('YOUR_DEPLOYMENT_ID')) return;
+  if (!SOA_CONFIG.APPS_SCRIPT_URL || SOA_CONFIG.APPS_SCRIPT_URL.includes('YOUR_DEPLOYMENT_ID')) {
+    console.warn('[SOA] APPS_SCRIPT_URL not configured — sponsor autocomplete disabled.');
+    return;
+  }
   fetch(SOA_CONFIG.APPS_SCRIPT_URL + '?action=getSponsors', {
     redirect: 'follow',   // Apps Script doGet returns a 302 redirect
   })
@@ -1599,16 +1606,30 @@ function initConfirmButtons() {
     const nameInp  = btn.closest('.soa-grid') ? btn.closest('.soa-grid').querySelector('.soa-ac-input') : null;
 
     btn.addEventListener('click', () => {
+      const verifiedInList = nameInp && nameInp.dataset.verifiedInList === 'true';
+      const listLoaded     = sponsorList.length > 0;
+
       hidden.value = 'true';
-      btn.classList.add('confirmed');
-      btn.textContent = '✓ Confirmed: SOA Member';
+      btn.classList.remove('confirmed', 'unverified');
       clearError(hiddenId);
+
+      if (verifiedInList) {
+        btn.classList.add('confirmed');
+        btn.textContent = '✓ Confirmed: SOA Member';
+      } else if (listLoaded) {
+        btn.classList.add('unverified');
+        btn.textContent = '⚠ Not in list — manually confirmed';
+      } else {
+        btn.classList.add('unverified');
+        btn.textContent = '⚠ List unavailable — manually confirmed';
+      }
     });
 
     if (nameInp) {
       nameInp.addEventListener('input', () => {
+        nameInp.dataset.verifiedInList = 'false';
         hidden.value = '';
-        btn.classList.remove('confirmed');
+        btn.classList.remove('confirmed', 'unverified');
         btn.textContent = 'Confirm: SOA Member';
       });
     }
@@ -1644,8 +1665,12 @@ function initAutocomplete() {
         item.addEventListener('mousedown', e => {
           e.preventDefault();
           inp.value = name;
+          inp.dataset.verifiedInList = 'true';
           listEl.classList.remove('open');
           validateField(inp);
+          // auto-confirm since name was picked from the verified member list
+          const confirmBtn = inp.closest('.soa-grid') ? inp.closest('.soa-grid').querySelector('.soa-confirm-btn') : null;
+          if (confirmBtn) confirmBtn.click();
         });
         listEl.appendChild(item);
       });
