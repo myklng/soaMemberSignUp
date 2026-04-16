@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.1.0
+  Version : 1.2.0
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -362,6 +362,28 @@
 }
 .soa-ac-item:hover,
 .soa-ac-item.focused { background: var(--soa-primary-lt); color: var(--soa-primary); }
+.soa-ac-hint {
+  padding: 8px 12px; font-size: 12px; color: var(--soa-muted);
+  font-style: italic; border-top: 1px solid var(--soa-border-lt);
+}
+
+/* ----- Confirm SOA Member button ----- */
+.soa-confirm-btn {
+  display: flex !important; align-items: center; justify-content: center; gap: 6px;
+  width: 100% !important; padding: 9px 14px !important;
+  background: #fff !important; border: 1px solid var(--soa-border) !important;
+  border-radius: var(--soa-radius) !important; font-family: inherit !important;
+  font-size: 13px !important; font-weight: 500 !important; color: var(--soa-text) !important;
+  cursor: pointer; transition: border-color .2s, background .2s, color .2s;
+  margin-top: 28px;
+}
+.soa-confirm-btn:hover:not(.confirmed) {
+  border-color: var(--soa-primary) !important; color: var(--soa-primary) !important;
+}
+.soa-confirm-btn.confirmed {
+  background: #f0fdf4 !important; border-color: #22c55e !important;
+  color: #16a34a !important; cursor: default;
+}
 
 /* ----- Alerts ----- */
 .soa-alert {
@@ -1018,12 +1040,11 @@
           <span class="soa-err" id="err-proposer_name"></span>
         </div>
         <div class="soa-fg soa-col-4">
-          <label class="soa-check-item" style="margin-top:28px">
-            <input type="checkbox" id="proposer_is_soa" name="proposer_is_soa" value="true"
-                   data-required="true"
-                   data-err-required="Please confirm the proposer is an SOA member." />
-            Confirm: SOA Member
-          </label>
+          <button type="button" class="soa-confirm-btn" id="btn-proposer_is_soa"
+                  data-confirms="proposer_is_soa">Confirm: SOA Member</button>
+          <input type="hidden" id="proposer_is_soa" name="proposer_is_soa" value=""
+                 data-required="true"
+                 data-err-required="Please confirm the proposer is an SOA member." />
           <span class="soa-err" id="err-proposer_is_soa"></span>
         </div>
         <div class="soa-fg soa-col-12" id="fg-proposer_sig">
@@ -1057,12 +1078,11 @@
           <span class="soa-err" id="err-seconder_name"></span>
         </div>
         <div class="soa-fg soa-col-4">
-          <label class="soa-check-item" style="margin-top:28px">
-            <input type="checkbox" id="seconder_is_soa" name="seconder_is_soa" value="true"
-                   data-required="true"
-                   data-err-required="Please confirm the seconder is an SOA member." />
-            Confirm: SOA Member
-          </label>
+          <button type="button" class="soa-confirm-btn" id="btn-seconder_is_soa"
+                  data-confirms="seconder_is_soa">Confirm: SOA Member</button>
+          <input type="hidden" id="seconder_is_soa" name="seconder_is_soa" value=""
+                 data-required="true"
+                 data-err-required="Please confirm the seconder is an SOA member." />
           <span class="soa-err" id="err-seconder_is_soa"></span>
         </div>
         <div class="soa-fg soa-col-12" id="fg-seconder_sig">
@@ -1180,7 +1200,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.1.0</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.0</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -1564,6 +1584,37 @@ function fetchSponsors() {
     });
 }
 
+function showHint(listEl, text) {
+  const hint = document.createElement('div');
+  hint.className = 'soa-ac-hint';
+  hint.textContent = text;
+  listEl.appendChild(hint);
+  listEl.classList.add('open');
+}
+
+function initConfirmButtons() {
+  $$('.soa-confirm-btn[data-confirms]').forEach(btn => {
+    const hiddenId = btn.dataset.confirms;
+    const hidden   = $(hiddenId);
+    const nameInp  = btn.closest('.soa-grid') ? btn.closest('.soa-grid').querySelector('.soa-ac-input') : null;
+
+    btn.addEventListener('click', () => {
+      hidden.value = 'true';
+      btn.classList.add('confirmed');
+      btn.textContent = '✓ Confirmed: SOA Member';
+      clearError(hiddenId);
+    });
+
+    if (nameInp) {
+      nameInp.addEventListener('input', () => {
+        hidden.value = '';
+        btn.classList.remove('confirmed');
+        btn.textContent = 'Confirm: SOA Member';
+      });
+    }
+  });
+}
+
 function initAutocomplete() {
   $$('.soa-ac-input').forEach(inp => {
     const listEl = document.getElementById('ac-' + inp.id);
@@ -1574,10 +1625,19 @@ function initAutocomplete() {
       const q = inp.value.toLowerCase().trim();
       listEl.innerHTML = '';
       focused = -1;
-      if (!q || sponsorList.length === 0) { listEl.classList.remove('open'); return; }
-      const matches = sponsorList.filter(n => n.toLowerCase().includes(q)).slice(0,8);
-      if (!matches.length) { listEl.classList.remove('open'); return; }
-      matches.forEach((name, i) => {
+      if (!q) { listEl.classList.remove('open'); return; }
+
+      if (sponsorList.length === 0) {
+        showHint(listEl, 'Member list unavailable — type name manually and confirm below.');
+        return;
+      }
+
+      const matches = sponsorList.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+      if (!matches.length) {
+        showHint(listEl, 'Not found in SOA member list — type name manually and confirm below.');
+        return;
+      }
+      matches.forEach(name => {
         const item = document.createElement('div');
         item.className = 'soa-ac-item';
         item.textContent = name;
@@ -1881,11 +1941,11 @@ function collectPayload(signUpID) {
     sponsors: {
       proposer: {
         name:          $('proposer_name').value.trim(),
-        is_soa_member: $('proposer_is_soa').checked,
+        is_soa_member: $('proposer_is_soa').value === 'true',
       },
       seconder: {
         name:          $('seconder_name').value.trim(),
-        is_soa_member: $('seconder_is_soa').checked,
+        is_soa_member: $('seconder_is_soa').value === 'true',
       },
     },
     declaration: {
@@ -1977,6 +2037,7 @@ async function boot() {
   initSectionNav();
   fetchSponsors();
   initAutocomplete();
+  initConfirmButtons();
   await Promise.all([initSignaturePads()]);
 }
 
