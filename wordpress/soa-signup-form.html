@@ -1,0 +1,1980 @@
+<!--
+  SOA Singapore — Membership Application Form
+  Version : 1.0.0
+  Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
+  Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
+
+  CONFIGURE BEFORE GOING LIVE — search for "TODO:" in this file:
+    • SOA_CONFIG.APPS_SCRIPT_URL  — your deployed Apps Script web-app URL
+    • MEMBERSHIP_FEES             — entrance + annual fee per tier (SGD)
+-->
+
+<!-- ============================================================
+     STYLES  (scoped to .soa-form-wrapper — safe inside WordPress)
+     ============================================================ -->
+<style>
+/* ----- Reset ----- */
+.soa-form-wrapper *, .soa-form-wrapper *::before, .soa-form-wrapper *::after {
+  box-sizing: border-box;
+}
+
+/* ----- CSS custom properties (scoped, not :root) ----- */
+.soa-form-wrapper {
+  --soa-primary:        #0d7377;
+  --soa-primary-dk:     #095d61;
+  --soa-primary-lt:     #e6f4f4;
+  --soa-accent:         #14a085;
+  --soa-muted:          #6b7280;
+  --soa-border:         #d1d5db;
+  --soa-border-focus:   #0d7377;
+  --soa-error:          #dc2626;
+  --soa-error-bg:       #fef2f2;
+  --soa-error-bd:       #fca5a5;
+  --soa-success:        #059669;
+  --soa-success-bg:     #f0fdf4;
+  --soa-bg-card:        #f9fafb;
+  --soa-bg-alt:         #f3f4f6;
+  --soa-radius:         4px;
+  --soa-radius-md:      8px;
+  --soa-shadow:         0 1px 3px rgba(0,0,0,.10);
+  --soa-shadow-md:      0 4px 6px rgba(0,0,0,.07);
+
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 12px 60px;
+  font-family: inherit;
+  color: inherit;
+}
+
+/* ----- Sticky section nav ----- */
+.soa-sec-nav {
+  position: sticky;
+  top: 32px;
+  z-index: 50;
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--soa-border);
+  border-radius: 40px;
+  padding: 6px 10px;
+  margin: 24px 0 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  box-shadow: var(--soa-shadow);
+}
+.soa-sec-nav a {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--soa-muted);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.soa-sec-nav a:hover        { background: var(--soa-primary-lt); color: var(--soa-primary); }
+.soa-sec-nav a.is-active    { background: var(--soa-primary);    color: #fff; }
+
+/* ----- Section card ----- */
+.soa-section {
+  background: var(--soa-bg-card);
+  border: 1px solid var(--soa-border);
+  border-radius: var(--soa-radius-md);
+  padding: 24px;
+  margin-bottom: 20px;
+  scroll-margin-top: 80px;
+}
+.soa-section-hd {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--soa-primary);
+  margin: 0 0 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--soa-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.soa-section-hd::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 15px;
+  background: var(--soa-primary);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ----- 12-col grid ----- */
+.soa-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.soa-col-12 { grid-column: span 12; }
+.soa-col-9  { grid-column: span 9;  }
+.soa-col-8  { grid-column: span 8;  }
+.soa-col-6  { grid-column: span 6;  }
+.soa-col-4  { grid-column: span 4;  }
+.soa-col-3  { grid-column: span 3;  }
+.soa-col-2  { grid-column: span 2;  }
+
+@media (max-width: 768px) {
+  .soa-col-9, .soa-col-8, .soa-col-6  { grid-column: span 12; }
+  .soa-col-4, .soa-col-3 { grid-column: span 6;  }
+  .soa-col-2              { grid-column: span 4;  }
+}
+@media (max-width: 480px) {
+  .soa-col-4, .soa-col-3, .soa-col-2 { grid-column: span 12; }
+}
+
+/* ----- Form group ----- */
+.soa-fg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.soa-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.soa-req { color: var(--soa-error); margin-left: 2px; }
+.soa-hint {
+  font-size: 11px;
+  color: var(--soa-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* ----- Inputs ----- */
+.soa-input,
+.soa-select,
+.soa-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--soa-border);
+  border-radius: var(--soa-radius);
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  color: inherit;
+  line-height: 1.5;
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.soa-input:focus,
+.soa-select:focus,
+.soa-textarea:focus {
+  outline: none;
+  border-color: var(--soa-border-focus);
+  box-shadow: 0 0 0 3px rgba(13,115,119,.12);
+}
+.soa-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+  cursor: pointer;
+}
+.soa-textarea { resize: vertical; min-height: 90px; }
+.soa-input[readonly] { background: var(--soa-bg-alt); cursor: default; }
+
+/* Error state */
+.soa-fg.has-error .soa-input,
+.soa-fg.has-error .soa-select,
+.soa-fg.has-error .soa-textarea  { border-color: var(--soa-error); background: var(--soa-error-bg); }
+.soa-fg.has-error .soa-input:focus,
+.soa-fg.has-error .soa-select:focus { box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
+
+.soa-err {
+  font-size: 11px;
+  color: var(--soa-error);
+  display: none;
+  align-items: center;
+  gap: 3px;
+}
+.soa-err::before { content: '⚠ '; }
+.soa-fg.has-error .soa-err { display: flex; }
+
+/* ----- File upload zone ----- */
+.soa-file-zone {
+  position: relative;
+  border: 2px dashed var(--soa-border);
+  border-radius: var(--soa-radius-md);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color .2s, background .2s;
+}
+.soa-file-zone:hover,
+.soa-file-zone.drag-over { border-color: var(--soa-primary); background: var(--soa-primary-lt); }
+.soa-file-zone input[type="file"] {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+}
+.soa-file-icon   { font-size: 26px; display: block; margin-bottom: 6px; }
+.soa-file-copy   { font-size: 12px; color: var(--soa-muted); line-height: 1.5; }
+.soa-file-copy strong { color: var(--soa-primary); }
+.soa-fg.has-error .soa-file-zone { border-color: var(--soa-error); background: var(--soa-error-bg); }
+
+.soa-file-preview {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  background: var(--soa-primary-lt);
+  border-radius: var(--soa-radius);
+  font-size: 12px;
+}
+.soa-file-preview.show   { display: flex; }
+.soa-file-preview-name   { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.soa-file-preview-thumb  { width: 32px; height: 32px; object-fit: cover; border-radius: 2px; display: none; }
+.soa-file-preview-thumb.show { display: block; }
+.soa-file-rm {
+  background: none; border: none; cursor: pointer;
+  color: var(--soa-error); font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0;
+}
+
+/* ----- Signature pad ----- */
+.soa-sigpad-wrap {
+  border: 1px solid var(--soa-border);
+  border-radius: var(--soa-radius);
+  background: #fff;
+  overflow: hidden;
+}
+.soa-fg.has-error .soa-sigpad-wrap { border-color: var(--soa-error); }
+.soa-sigpad-canvas {
+  display: block; width: 100%; height: 150px;
+  touch-action: none; cursor: crosshair;
+}
+.soa-sigpad-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 10px;
+  border-top: 1px solid var(--soa-border);
+  background: var(--soa-bg-alt);
+}
+.soa-sigpad-hint { font-size: 11px; color: var(--soa-muted); }
+.soa-sigpad-clear {
+  font-size: 11px; color: var(--soa-muted);
+  background: none; border: none; cursor: pointer;
+  padding: 2px 8px; border-radius: var(--soa-radius);
+  transition: background .15s;
+  font-family: inherit;
+}
+.soa-sigpad-clear:hover { background: var(--soa-border); }
+
+/* ----- Radio / checkbox ----- */
+.soa-radio-group, .soa-check-group {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.soa-radio-group.inline, .soa-check-group.inline {
+  flex-direction: row; flex-wrap: wrap; gap: 16px;
+}
+.soa-radio-item, .soa-check-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: 14px; line-height: 1.4; cursor: pointer;
+}
+.soa-radio-item input, .soa-check-item input {
+  width: 15px; height: 15px; margin-top: 2px;
+  accent-color: var(--soa-primary); cursor: pointer; flex-shrink: 0;
+}
+
+/* ----- Membership tier cards ----- */
+.soa-tier-grid {
+  display: grid; grid-template-columns: repeat(2,1fr); gap: 10px;
+}
+@media (max-width: 540px) { .soa-tier-grid { grid-template-columns: 1fr; } }
+.soa-tier-input { display: none; }
+.soa-tier-card {
+  display: block;
+  border: 2px solid var(--soa-border);
+  border-radius: var(--soa-radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+  background: #fff;
+}
+.soa-tier-card:hover { border-color: var(--soa-primary); background: var(--soa-primary-lt); }
+.soa-tier-input:checked + .soa-tier-card {
+  border-color: var(--soa-primary); background: var(--soa-primary-lt);
+  box-shadow: 0 0 0 2px rgba(13,115,119,.2);
+}
+.soa-tier-name  { font-weight: 600; font-size: 14px; color: var(--soa-primary); margin-bottom: 3px; }
+.soa-tier-price { font-size: 13px; color: var(--soa-muted); }
+.soa-tier-desc  { font-size: 12px; color: var(--soa-muted); margin-top: 5px; line-height: 1.4; }
+
+/* ----- Fee summary ----- */
+.soa-fee-box {
+  background: var(--soa-bg-alt); border: 1px solid var(--soa-border);
+  border-radius: var(--soa-radius-md); padding: 14px 16px; margin-top: 14px;
+}
+.soa-fee-row  { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.soa-fee-total {
+  border-top: 1px solid var(--soa-border);
+  margin-top: 6px; padding-top: 8px;
+  font-weight: 700; font-size: 15px;
+}
+
+/* ----- Conditional block ----- */
+.soa-cond { display: none; }
+.soa-cond.show { display: block; animation: soaIn .25s ease; }
+
+/* ----- Repeatable orgs ----- */
+.soa-repeat-item {
+  background: var(--soa-bg-alt); border: 1px solid var(--soa-border);
+  border-radius: var(--soa-radius-md); padding: 14px; margin-bottom: 10px;
+  position: relative;
+}
+.soa-repeat-rm {
+  position: absolute; top: 9px; right: 10px;
+  background: none; border: none; cursor: pointer;
+  color: var(--soa-error); font-size: 17px; line-height: 1; padding: 0 3px;
+}
+.soa-btn-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px;
+  background: #fff; border: 1px dashed var(--soa-primary);
+  border-radius: var(--soa-radius); color: var(--soa-primary);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  font-family: inherit; transition: background .2s;
+}
+.soa-btn-add:hover { background: var(--soa-primary-lt); }
+
+/* ----- Autocomplete ----- */
+.soa-ac-wrap { position: relative; }
+.soa-ac-list {
+  position: absolute; top: 100%; left: 0; right: 0;
+  background: #fff; border: 1px solid var(--soa-border);
+  border-top: none; border-radius: 0 0 var(--soa-radius) var(--soa-radius);
+  box-shadow: var(--soa-shadow-md); z-index: 80;
+  max-height: 180px; overflow-y: auto; display: none;
+}
+.soa-ac-list.open { display: block; }
+.soa-ac-item {
+  padding: 8px 12px; font-size: 13px; cursor: pointer;
+  transition: background .12s;
+}
+.soa-ac-item:hover,
+.soa-ac-item.focused { background: var(--soa-primary-lt); color: var(--soa-primary); }
+
+/* ----- Alerts ----- */
+.soa-alert {
+  padding: 10px 14px; border-radius: var(--soa-radius);
+  font-size: 13px; line-height: 1.5; margin-bottom: 12px; display: none;
+}
+.soa-alert.show { display: block; }
+.soa-alert-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+.soa-alert-error   { background: var(--soa-error-bg); border: 1px solid var(--soa-error-bd); color: var(--soa-error); }
+.soa-alert-success { background: var(--soa-success-bg); border: 1px solid #bbf7d0; color: #166534; }
+
+/* ----- Submit button ----- */
+.soa-submit-wrap { text-align: center; margin-top: 28px; }
+.soa-btn-submit {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 36px;
+  background: var(--soa-primary); color: #fff;
+  border: none; border-radius: var(--soa-radius);
+  font-family: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: background .2s, opacity .2s;
+}
+.soa-btn-submit:hover   { background: var(--soa-primary-dk); }
+.soa-btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+/* ----- Overlay / success ----- */
+.soa-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); z-index: 9999;
+  align-items: center; justify-content: center;
+}
+.soa-overlay.show { display: flex; }
+.soa-overlay-box {
+  background: #fff; border-radius: var(--soa-radius-md);
+  padding: 36px; text-align: center; max-width: 340px; margin: 16px;
+}
+.soa-spinner {
+  width: 38px; height: 38px; margin: 0 auto 14px;
+  border: 3px solid var(--soa-primary-lt);
+  border-top-color: var(--soa-primary);
+  border-radius: 50%; animation: soaSpin .7s linear infinite;
+}
+@keyframes soaSpin { to { transform: rotate(360deg); } }
+@keyframes soaIn   { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.soa-overlay-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.soa-overlay-sub   { font-size: 13px; color: var(--soa-muted); }
+
+.soa-success-screen { display: none; text-align: center; padding: 56px 20px; }
+.soa-success-screen.show { display: block; animation: soaIn .4s ease; }
+.soa-success-icon {
+  width: 68px; height: 68px; border-radius: 50%;
+  background: var(--soa-primary); color: #fff;
+  font-size: 30px; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px;
+}
+.soa-success-id {
+  display: inline-block;
+  background: var(--soa-primary-lt); color: var(--soa-primary);
+  padding: 5px 14px; border-radius: var(--soa-radius);
+  font-size: 13px; font-weight: 700; letter-spacing: .06em; margin: 6px 0 12px;
+}
+.soa-success-body { font-size: 14px; color: var(--soa-muted); line-height: 1.6; max-width: 380px; margin: 0 auto; }
+
+/* ----- Misc ----- */
+.soa-note {
+  font-size: 12px; color: var(--soa-muted);
+  padding: 8px 12px; background: var(--soa-bg-alt);
+  border-left: 3px solid var(--soa-primary); border-radius: var(--soa-radius);
+  line-height: 1.5;
+}
+.soa-divider { border: none; border-top: 1px solid var(--soa-border); margin: 16px 0; }
+.soa-hidden  { display: none !important; }
+.soa-sub-hd  { font-size: 13px; font-weight: 600; color: var(--soa-primary); margin: 14px 0 8px; }
+</style>
+
+<!-- ============================================================
+     MARKUP
+     ============================================================ -->
+<div class="soa-form-wrapper" id="soaWrapper">
+
+  <!-- Section nav -->
+  <nav class="soa-sec-nav" id="soaSecNav" aria-label="Jump to section">
+    <a href="#s-personal">1 · Personal</a>
+    <a href="#s-address">2 · Address</a>
+    <a href="#s-quals">3 · Qualifications</a>
+    <a href="#s-membership">4 · Membership</a>
+    <a href="#s-payment">5 · Payment</a>
+    <a href="#s-photo">6 · Photo</a>
+    <a href="#s-sponsors">7 · Sponsors</a>
+    <a href="#s-declaration">8 · Declaration</a>
+    <a href="#s-agreement">9 · Agreement</a>
+  </nav>
+
+  <!-- Global error banner -->
+  <div class="soa-alert soa-alert-error" id="soaGlobalError" role="alert"></div>
+
+  <form id="soaForm" novalidate>
+
+    <!-- ══════════════════════════════════════════
+         §1 PERSONAL DETAILS
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-personal">
+      <h3 class="soa-section-hd">1 · Personal Details</h3>
+      <div class="soa-grid">
+
+        <!-- Full Name (English) -->
+        <div class="soa-fg soa-col-6" id="fg-fullname_en">
+          <label class="soa-label" for="fullname_en">Full Name (English) <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="fullname_en" name="fullname_en"
+                 placeholder="As per NRIC / Passport"
+                 data-required="true"
+                 data-pattern="^[A-Za-z\s\-'\.]+$"
+                 data-err-required="Full name (English) is required."
+                 data-err-pattern="Only letters, spaces, hyphens, apostrophes and periods allowed."
+                 autocomplete="name" />
+          <span class="soa-err" id="err-fullname_en"></span>
+        </div>
+
+        <!-- Full Name (Chinese) -->
+        <div class="soa-fg soa-col-6" id="fg-fullname_zh">
+          <label class="soa-label" for="fullname_zh">Full Name (Chinese)</label>
+          <input class="soa-input" type="text" id="fullname_zh" name="fullname_zh"
+                 placeholder="如适用 (optional)"
+                 data-pattern="^[\u4e00-\u9fff]+$"
+                 data-err-pattern="Please enter Chinese characters only." />
+          <span class="soa-err" id="err-fullname_zh"></span>
+        </div>
+
+        <!-- Date of Birth -->
+        <div class="soa-fg soa-col-4" id="fg-dob">
+          <label class="soa-label" for="dob">Date of Birth <span class="soa-req">*</span></label>
+          <input class="soa-input soa-date-mask" type="text" id="dob" name="dob"
+                 placeholder="DD/MM/YYYY" maxlength="10"
+                 data-required="true"
+                 data-pattern="^\d{2}/\d{2}/\d{4}$"
+                 data-err-required="Date of birth is required."
+                 data-err-pattern="Use DD/MM/YYYY format." />
+          <span class="soa-err" id="err-dob"></span>
+        </div>
+
+        <!-- NRIC -->
+        <div class="soa-fg soa-col-4" id="fg-nric">
+          <label class="soa-label" for="nric">NRIC / FIN <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="nric" name="nric"
+                 placeholder="e.g. S1234567A" maxlength="9"
+                 data-required="true"
+                 data-pattern="^[STFGM]\d{7}[A-Z]$"
+                 data-err-required="NRIC / FIN is required."
+                 data-err-pattern="Format: S/T/F/G/M + 7 digits + letter (e.g. S1234567A)."
+                 style="text-transform:uppercase" />
+          <span class="soa-err" id="err-nric"></span>
+        </div>
+
+        <!-- Citizenship -->
+        <div class="soa-fg soa-col-4" id="fg-citizenship">
+          <label class="soa-label" for="citizenship">Citizenship <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="citizenship" name="citizenship"
+                 placeholder="e.g. Singaporean"
+                 data-required="true"
+                 data-pattern="^[A-Za-z\s\-]+$"
+                 data-err-required="Citizenship is required."
+                 data-err-pattern="Letters and hyphens only." />
+          <span class="soa-err" id="err-citizenship"></span>
+        </div>
+
+        <!-- Email -->
+        <div class="soa-fg soa-col-6" id="fg-email">
+          <label class="soa-label" for="email">Email Address <span class="soa-req">*</span></label>
+          <input class="soa-input" type="email" id="email" name="email"
+                 placeholder="you@example.com"
+                 data-required="true"
+                 data-pattern="^[\w\.\-]+@[\w\.\-]+\.[a-zA-Z]{2,}$"
+                 data-err-required="Email address is required."
+                 data-err-pattern="Please enter a valid email address."
+                 autocomplete="email" />
+          <span class="soa-err" id="err-email"></span>
+        </div>
+
+        <!-- OOB Registration Number -->
+        <div class="soa-fg soa-col-6" id="fg-oob">
+          <label class="soa-label" for="oob">OOB Registration No. <span class="soa-hint" style="font-weight:400">(if applicable)</span></label>
+          <input class="soa-input" type="text" id="oob" name="oob"
+                 placeholder="Optometry Board of Singapore reg. no."
+                 style="text-transform:uppercase" />
+          <span class="soa-err" id="err-oob"></span>
+        </div>
+
+      </div><!-- /.soa-grid -->
+    </div><!-- /#s-personal -->
+
+
+    <!-- ══════════════════════════════════════════
+         §2 ADDRESSES
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-address">
+      <h3 class="soa-section-hd">2 · Address Information</h3>
+
+      <!-- Practising toggle -->
+      <div class="soa-fg soa-col-12" id="fg-is_practicing" style="margin-bottom:16px">
+        <label class="soa-label">Are you currently practising optometry? <span class="soa-req">*</span></label>
+        <div class="soa-radio-group inline" style="margin-top:6px">
+          <label class="soa-radio-item">
+            <input type="radio" name="is_practicing" id="is_practicing_yes" value="yes"
+                   data-required="true" data-group="is_practicing"
+                   data-err-required="Please indicate whether you are currently practising." />
+            Yes
+          </label>
+          <label class="soa-radio-item">
+            <input type="radio" name="is_practicing" id="is_practicing_no" value="no" />
+            No
+          </label>
+        </div>
+        <span class="soa-err" id="err-is_practicing"></span>
+      </div>
+
+      <!-- Practice address (conditional) -->
+      <div class="soa-cond" id="cond-practice">
+        <div class="soa-sub-hd">Practice Address</div>
+        <div class="soa-grid">
+
+          <div class="soa-fg soa-col-12" id="fg-practice_name">
+            <label class="soa-label" for="practice_name">Practice / Clinic Name <span class="soa-req">*</span></label>
+            <input class="soa-input" type="text" id="practice_name" name="practice_name"
+                   placeholder="Name of practice or clinic"
+                   data-required-when="is_practicing:yes"
+                   data-err-required="Practice name is required when currently practising." />
+            <span class="soa-err" id="err-practice_name"></span>
+          </div>
+
+          <div class="soa-fg soa-col-8" id="fg-practice_address">
+            <label class="soa-label" for="practice_address">Address <span class="soa-req">*</span></label>
+            <input class="soa-input" type="text" id="practice_address" name="practice_address"
+                   placeholder="Street address, unit number"
+                   data-required-when="is_practicing:yes"
+                   data-err-required="Practice address is required when currently practising." />
+            <span class="soa-err" id="err-practice_address"></span>
+          </div>
+
+          <div class="soa-fg soa-col-4" id="fg-practice_country">
+            <label class="soa-label" for="practice_country">Country <span class="soa-req">*</span></label>
+            <select class="soa-select" id="practice_country" name="practice_country"
+                    data-required-when="is_practicing:yes"
+                    data-err-required="Country is required.">
+              <option value="">Select…</option>
+            </select>
+            <span class="soa-err" id="err-practice_country"></span>
+          </div>
+
+          <div class="soa-fg soa-col-4" id="fg-practice_tel">
+            <label class="soa-label" for="practice_tel">Tel <span class="soa-req">*</span></label>
+            <input class="soa-input" type="tel" id="practice_tel" name="practice_tel"
+                   placeholder="+65 6XXX XXXX"
+                   data-required-when="is_practicing:yes"
+                   data-err-required="Practice telephone is required when currently practising." />
+            <span class="soa-err" id="err-practice_tel"></span>
+          </div>
+
+        </div>
+        <hr class="soa-divider" />
+      </div><!-- /#cond-practice -->
+
+      <!-- Residence address -->
+      <div class="soa-sub-hd">Residence Address</div>
+      <div class="soa-grid">
+
+        <div class="soa-fg soa-col-8" id="fg-res_address">
+          <label class="soa-label" for="res_address">Address <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="res_address" name="res_address"
+                 placeholder="Street address, unit number"
+                 data-required="true"
+                 data-pattern="^[A-Za-z0-9\s\-\,\.\#]+$"
+                 data-err-required="Residence address is required."
+                 data-err-pattern="Address contains invalid characters." />
+          <span class="soa-err" id="err-res_address"></span>
+        </div>
+
+        <div class="soa-fg soa-col-4" id="fg-res_country">
+          <label class="soa-label" for="res_country">Country <span class="soa-req">*</span></label>
+          <select class="soa-select" id="res_country" name="res_country"
+                  data-required="true"
+                  data-err-required="Country is required.">
+            <option value="">Select…</option>
+          </select>
+          <span class="soa-err" id="err-res_country"></span>
+        </div>
+
+        <div class="soa-fg soa-col-4" id="fg-tel_home">
+          <label class="soa-label" for="tel_home">Tel (Home)</label>
+          <input class="soa-input" type="tel" id="tel_home" name="tel_home"
+                 placeholder="+65 6XXX XXXX (optional)" />
+        </div>
+
+        <div class="soa-fg soa-col-4" id="fg-tel_mobile">
+          <label class="soa-label" for="tel_mobile">Tel (Mobile) <span class="soa-req">*</span></label>
+          <input class="soa-input" type="tel" id="tel_mobile" name="tel_mobile"
+                 placeholder="+65 9XXX XXXX"
+                 data-required="true"
+                 data-err-required="Mobile number is required." />
+          <span class="soa-err" id="err-tel_mobile"></span>
+        </div>
+
+      </div>
+    </div><!-- /#s-address -->
+
+
+    <!-- ══════════════════════════════════════════
+         §3 QUALIFICATIONS & BACKGROUND
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-quals">
+      <h3 class="soa-section-hd">3 · Qualifications &amp; Professional Background</h3>
+
+      <div class="soa-sub-hd">Latest Relevant Qualification</div>
+      <div class="soa-grid">
+
+        <div class="soa-fg soa-col-8" id="fg-qual_desc">
+          <label class="soa-label" for="qual_desc">Qualification Held <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="qual_desc" name="qual_desc"
+                 placeholder="e.g. Bachelor of Optometry"
+                 data-required="true"
+                 data-pattern="^[A-Za-z0-9\s\-\,\.]+$"
+                 data-err-required="Qualification description is required."
+                 data-err-pattern="Only letters, numbers and common punctuation." />
+          <span class="soa-err" id="err-qual_desc"></span>
+        </div>
+
+        <div class="soa-fg soa-col-4" id="fg-qual_date">
+          <label class="soa-label" for="qual_date">Date of Issue <span class="soa-req">*</span></label>
+          <input class="soa-input soa-date-mask" type="text" id="qual_date" name="qual_date"
+                 placeholder="DD/MM/YYYY" maxlength="10"
+                 data-required="true"
+                 data-pattern="^\d{2}/\d{2}/\d{4}$"
+                 data-err-required="Date of issue is required."
+                 data-err-pattern="Use DD/MM/YYYY format." />
+          <span class="soa-err" id="err-qual_date"></span>
+        </div>
+
+        <div class="soa-fg soa-col-6" id="fg-grad_course">
+          <label class="soa-label" for="grad_course">Graduate Course <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="grad_course" name="grad_course"
+                 placeholder="e.g. Optometry"
+                 data-required="true"
+                 data-pattern="^[A-Za-z0-9\s\-\,\.]+$"
+                 data-err-required="Graduate course is required."
+                 data-err-pattern="Only letters, numbers and common punctuation." />
+          <span class="soa-err" id="err-grad_course"></span>
+        </div>
+
+        <div class="soa-fg soa-col-6" id="fg-grad_inst">
+          <label class="soa-label" for="grad_inst">Graduate Institution <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="grad_inst" name="grad_inst"
+                 placeholder="e.g. Singapore Polytechnic"
+                 data-required="true"
+                 data-pattern="^[A-Za-z0-9\s\-\,\.]+$"
+                 data-err-required="Graduate institution is required."
+                 data-err-pattern="Only letters, numbers and common punctuation." />
+          <span class="soa-err" id="err-grad_inst"></span>
+        </div>
+
+        <!-- Qualification photocopy upload -->
+        <div class="soa-fg soa-col-12" id="fg-qual_photocopy">
+          <label class="soa-label">Photocopy of Qualification <span class="soa-req">*</span></label>
+          <div class="soa-file-zone" id="fz-qual_photocopy"
+               data-field="qual_photocopy" data-max-mb="5"
+               data-types="image/jpeg,image/png,application/pdf">
+            <input type="file" id="qual_photocopy" name="qual_photocopy"
+                   accept="image/jpeg,image/png,application/pdf"
+                   data-required="true"
+                   data-err-required="Please upload a photocopy of your qualification." />
+            <span class="soa-file-icon">📄</span>
+            <span class="soa-file-copy">
+              <strong>Click to upload</strong> or drag &amp; drop<br>
+              JPEG, PNG or PDF · max 5 MB · min 150 DPI
+            </span>
+          </div>
+          <div class="soa-file-preview" id="fp-qual_photocopy">
+            <img class="soa-file-preview-thumb" id="ft-qual_photocopy" alt="preview" />
+            <span class="soa-file-preview-name" id="fn-qual_photocopy"></span>
+            <button type="button" class="soa-file-rm" data-clears="qual_photocopy" aria-label="Remove file">×</button>
+          </div>
+          <span class="soa-err" id="err-qual_photocopy"></span>
+        </div>
+
+      </div><!-- /.soa-grid -->
+
+      <hr class="soa-divider" />
+      <div class="soa-sub-hd">Other Optometric Organisation Memberships <span style="font-weight:400;color:var(--soa-muted)">(if any)</span></div>
+      <div id="soa-orgs-list"></div>
+      <button type="button" class="soa-btn-add" id="btnAddOrg">＋ Add Organisation</button>
+
+      <hr class="soa-divider" />
+      <div class="soa-grid">
+        <div class="soa-fg soa-col-12" id="fg-experience">
+          <label class="soa-label" for="experience">Relevant Experience</label>
+          <textarea class="soa-textarea" id="experience" name="experience"
+                    placeholder="Brief description of relevant optometric experience (optional)"></textarea>
+        </div>
+
+        <div class="soa-fg soa-col-12">
+          <label class="soa-check-item">
+            <input type="checkbox" id="online_questionnaire" name="online_questionnaire" value="true" />
+            I have completed the online questionnaire.
+          </label>
+        </div>
+      </div>
+
+    </div><!-- /#s-quals -->
+
+
+    <!-- ══════════════════════════════════════════
+         §4 MEMBERSHIP TYPE
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-membership">
+      <h3 class="soa-section-hd">4 · Membership Type</h3>
+
+      <div class="soa-fg" id="fg-membership_type">
+        <label class="soa-label">Select a membership category <span class="soa-req">*</span></label>
+        <div class="soa-tier-grid" style="margin-top:10px">
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="membership_type"
+                   id="tier-Ordinary" value="Ordinary"
+                   data-required="true" data-group="membership_type"
+                   data-err-required="Please select a membership type." />
+            <label class="soa-tier-card" for="tier-Ordinary">
+              <div class="soa-tier-name">Ordinary</div>
+              <div class="soa-tier-price" id="price-Ordinary">SGD —</div>
+              <div class="soa-tier-desc">Full voting member. For qualified optometrists in active practice.</div>
+            </label>
+          </div>
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="membership_type"
+                   id="tier-Associate" value="Associate" />
+            <label class="soa-tier-card" for="tier-Associate">
+              <div class="soa-tier-name">Associate</div>
+              <div class="soa-tier-price" id="price-Associate">SGD —</div>
+              <div class="soa-tier-desc">For optometry students and those not yet fully qualified.</div>
+            </label>
+          </div>
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="membership_type"
+                   id="tier-CPE_Affiliate" value="CPE_Affiliate" />
+            <label class="soa-tier-card" for="tier-CPE_Affiliate">
+              <div class="soa-tier-name">CPE Affiliate</div>
+              <div class="soa-tier-price" id="price-CPE_Affiliate">SGD —</div>
+              <div class="soa-tier-desc">For continuing professional education participants.</div>
+            </label>
+          </div>
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="membership_type"
+                   id="tier-Life" value="Life" />
+            <label class="soa-tier-card" for="tier-Life">
+              <div class="soa-tier-name">Life</div>
+              <div class="soa-tier-price" id="price-Life">SGD —</div>
+              <div class="soa-tier-desc">One-time lifetime membership.</div>
+            </label>
+          </div>
+
+        </div>
+        <span class="soa-err" id="err-membership_type"></span>
+      </div>
+
+    </div><!-- /#s-membership -->
+
+
+    <!-- ══════════════════════════════════════════
+         §5 PAYMENT
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-payment">
+      <h3 class="soa-section-hd">5 · Payment</h3>
+
+      <!-- Fee summary (driven by JS) -->
+      <div class="soa-fee-box" id="soaFeeBox">
+        <div class="soa-fee-row">
+          <span>Entrance Fee</span>
+          <span id="fee-entrance">SGD —</span>
+        </div>
+        <div class="soa-fee-row">
+          <span id="fee-membership-lbl">Membership Fee</span>
+          <span id="fee-membership">SGD —</span>
+        </div>
+        <div class="soa-fee-row soa-fee-total">
+          <span>Total</span>
+          <span id="fee-total">SGD —</span>
+        </div>
+        <p class="soa-hint" style="margin-top:8px" id="fee-hint">
+          Select a membership type above to see the applicable fees.
+        </p>
+      </div>
+
+      <hr class="soa-divider" />
+
+      <!-- Payment method -->
+      <div class="soa-fg" id="fg-payment_method" style="margin-bottom:14px">
+        <label class="soa-label">Payment Method <span class="soa-req">*</span></label>
+        <div class="soa-radio-group inline" style="margin-top:6px">
+          <label class="soa-radio-item">
+            <input type="radio" name="payment_method" id="pm-Cheque" value="Cheque"
+                   data-required="true" data-group="payment_method"
+                   data-err-required="Please select a payment method." />
+            Cheque
+          </label>
+          <label class="soa-radio-item">
+            <input type="radio" name="payment_method" id="pm-BankTransfer" value="BankTransfer" />
+            Bank Transfer
+          </label>
+          <label class="soa-radio-item">
+            <input type="radio" name="payment_method" id="pm-PayNow" value="PayNow" />
+            PayNow
+          </label>
+        </div>
+        <span class="soa-err" id="err-payment_method"></span>
+      </div>
+
+      <!-- Cheque -->
+      <div class="soa-cond" id="cond-cheque">
+        <div class="soa-fg" id="fg-cheque_no">
+          <label class="soa-label" for="cheque_no">Cheque Number <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="cheque_no" name="cheque_no"
+                 placeholder="6–9 digit cheque number"
+                 data-required-when="payment_method:Cheque"
+                 data-pattern="^\d{6,9}$"
+                 data-err-required="Cheque number is required."
+                 data-err-pattern="Cheque number must be 6–9 digits." />
+          <span class="soa-err" id="err-cheque_no"></span>
+        </div>
+      </div>
+
+      <!-- Bank Transfer -->
+      <div class="soa-cond" id="cond-bank">
+        <div class="soa-fg" id="fg-bank_ref">
+          <label class="soa-label" for="bank_ref">Bank Transfer Reference <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="bank_ref" name="bank_ref"
+                 placeholder="Bank transfer reference / transaction ID"
+                 data-required-when="payment_method:BankTransfer"
+                 data-pattern="^[A-Za-z0-9\-]+$"
+                 data-err-required="Bank transfer reference is required."
+                 data-err-pattern="Alphanumeric characters and hyphens only." />
+          <span class="soa-err" id="err-bank_ref"></span>
+        </div>
+      </div>
+
+      <!-- PayNow -->
+      <div class="soa-cond" id="cond-paynow">
+        <div class="soa-fg" id="fg-paynow_ref">
+          <label class="soa-label" for="paynow_ref">PayNow Reference <span class="soa-req">*</span></label>
+          <input class="soa-input" type="text" id="paynow_ref" name="paynow_ref"
+                 placeholder="PayNow transaction reference"
+                 data-required-when="payment_method:PayNow"
+                 data-pattern="^[A-Za-z0-9\-]+$"
+                 data-err-required="PayNow reference is required."
+                 data-err-pattern="Alphanumeric characters and hyphens only." />
+          <span class="soa-err" id="err-paynow_ref"></span>
+        </div>
+      </div>
+
+      <!-- Payment proof upload -->
+      <div class="soa-fg" id="fg-payment_proof" style="margin-top:14px">
+        <label class="soa-label">Proof of Payment <span class="soa-req">*</span></label>
+        <div class="soa-file-zone"
+             data-field="payment_proof" data-max-mb="5"
+             data-types="image/jpeg,image/png,application/pdf">
+          <input type="file" id="payment_proof" name="payment_proof"
+                 accept="image/jpeg,image/png,application/pdf"
+                 data-required="true"
+                 data-err-required="Please upload proof of payment." />
+          <span class="soa-file-icon">🧾</span>
+          <span class="soa-file-copy">
+            <strong>Click to upload</strong> or drag &amp; drop<br>
+            Screenshot or scan of transfer / cheque / PayNow · JPEG, PNG or PDF · max 5 MB
+          </span>
+        </div>
+        <div class="soa-file-preview" id="fp-payment_proof">
+          <img class="soa-file-preview-thumb" id="ft-payment_proof" alt="preview" />
+          <span class="soa-file-preview-name" id="fn-payment_proof"></span>
+          <button type="button" class="soa-file-rm" data-clears="payment_proof" aria-label="Remove">×</button>
+        </div>
+        <span class="soa-err" id="err-payment_proof"></span>
+      </div>
+
+    </div><!-- /#s-payment -->
+
+
+    <!-- ══════════════════════════════════════════
+         §6 PASSPORT PHOTO
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-photo">
+      <h3 class="soa-section-hd">6 · Passport-Size Photo</h3>
+      <div class="soa-note" style="margin-bottom:14px">
+        White background · face centred · taken within the last 6 months · min 400 × 514 px · JPEG or PNG · max 2 MB
+      </div>
+      <div class="soa-fg" id="fg-passport_photo">
+        <label class="soa-label">Upload Photo <span class="soa-req">*</span></label>
+        <div class="soa-file-zone"
+             data-field="passport_photo" data-max-mb="2"
+             data-types="image/jpeg,image/png"
+             data-min-w="400" data-min-h="514">
+          <input type="file" id="passport_photo" name="passport_photo"
+                 accept="image/jpeg,image/png"
+                 data-required="true"
+                 data-err-required="Please upload your passport-size photo." />
+          <span class="soa-file-icon">🪪</span>
+          <span class="soa-file-copy">
+            <strong>Click to upload</strong> or drag &amp; drop<br>
+            JPEG or PNG · min 400 × 514 px · max 2 MB
+          </span>
+        </div>
+        <div class="soa-file-preview" id="fp-passport_photo">
+          <img class="soa-file-preview-thumb" id="ft-passport_photo" alt="preview" />
+          <span class="soa-file-preview-name" id="fn-passport_photo"></span>
+          <button type="button" class="soa-file-rm" data-clears="passport_photo" aria-label="Remove">×</button>
+        </div>
+        <span class="soa-err" id="err-passport_photo"></span>
+      </div>
+    </div><!-- /#s-photo -->
+
+
+    <!-- ══════════════════════════════════════════
+         §7 SPONSORS
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-sponsors">
+      <h3 class="soa-section-hd">7 · Sponsors</h3>
+      <div class="soa-alert soa-alert-info show">
+        Both your Proposer and Seconder must be current SOA members.
+        Start typing a name to search the SOA membership list.
+      </div>
+
+      <!-- Proposer -->
+      <div class="soa-sub-hd">Proposer</div>
+      <div class="soa-grid">
+        <div class="soa-fg soa-col-8" id="fg-proposer_name">
+          <label class="soa-label" for="proposer_name">Full Name <span class="soa-req">*</span></label>
+          <div class="soa-ac-wrap">
+            <input class="soa-input soa-ac-input" type="text" id="proposer_name" name="proposer_name"
+                   placeholder="Search SOA member list…"
+                   data-required="true" data-ac="sponsors"
+                   data-err-required="Proposer name is required."
+                   autocomplete="off" />
+            <div class="soa-ac-list" id="ac-proposer_name"></div>
+          </div>
+          <span class="soa-err" id="err-proposer_name"></span>
+        </div>
+        <div class="soa-fg soa-col-4">
+          <label class="soa-check-item" style="margin-top:28px">
+            <input type="checkbox" id="proposer_is_soa" name="proposer_is_soa" value="true"
+                   data-required="true"
+                   data-err-required="Please confirm the proposer is an SOA member." />
+            Confirm: SOA Member
+          </label>
+          <span class="soa-err" id="err-proposer_is_soa"></span>
+        </div>
+        <div class="soa-fg soa-col-12" id="fg-proposer_sig">
+          <label class="soa-label">Proposer's Signature <span class="soa-req">*</span></label>
+          <div class="soa-sigpad-wrap" id="spw-proposer_sig">
+            <canvas class="soa-sigpad-canvas" id="sp-proposer_sig" data-field="proposer_sig"></canvas>
+            <div class="soa-sigpad-bar">
+              <span class="soa-sigpad-hint">Sign above using mouse, trackpad or touch</span>
+              <button type="button" class="soa-sigpad-clear" data-clears-pad="sp-proposer_sig">Clear</button>
+            </div>
+          </div>
+          <span class="soa-err" id="err-proposer_sig"></span>
+        </div>
+      </div>
+
+      <hr class="soa-divider" />
+
+      <!-- Seconder -->
+      <div class="soa-sub-hd">Seconder</div>
+      <div class="soa-grid">
+        <div class="soa-fg soa-col-8" id="fg-seconder_name">
+          <label class="soa-label" for="seconder_name">Full Name <span class="soa-req">*</span></label>
+          <div class="soa-ac-wrap">
+            <input class="soa-input soa-ac-input" type="text" id="seconder_name" name="seconder_name"
+                   placeholder="Search SOA member list…"
+                   data-required="true" data-ac="sponsors"
+                   data-err-required="Seconder name is required."
+                   autocomplete="off" />
+            <div class="soa-ac-list" id="ac-seconder_name"></div>
+          </div>
+          <span class="soa-err" id="err-seconder_name"></span>
+        </div>
+        <div class="soa-fg soa-col-4">
+          <label class="soa-check-item" style="margin-top:28px">
+            <input type="checkbox" id="seconder_is_soa" name="seconder_is_soa" value="true"
+                   data-required="true"
+                   data-err-required="Please confirm the seconder is an SOA member." />
+            Confirm: SOA Member
+          </label>
+          <span class="soa-err" id="err-seconder_is_soa"></span>
+        </div>
+        <div class="soa-fg soa-col-12" id="fg-seconder_sig">
+          <label class="soa-label">Seconder's Signature <span class="soa-req">*</span></label>
+          <div class="soa-sigpad-wrap" id="spw-seconder_sig">
+            <canvas class="soa-sigpad-canvas" id="sp-seconder_sig" data-field="seconder_sig"></canvas>
+            <div class="soa-sigpad-bar">
+              <span class="soa-sigpad-hint">Sign above using mouse, trackpad or touch</span>
+              <button type="button" class="soa-sigpad-clear" data-clears-pad="sp-seconder_sig">Clear</button>
+            </div>
+          </div>
+          <span class="soa-err" id="err-seconder_sig"></span>
+        </div>
+      </div>
+
+    </div><!-- /#s-sponsors -->
+
+
+    <!-- ══════════════════════════════════════════
+         §8 APPLICANT DECLARATION
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-declaration">
+      <h3 class="soa-section-hd">8 · Applicant Declaration</h3>
+      <div class="soa-note" style="margin-bottom:14px">
+        I declare that the particulars given above are true and correct.
+        I agree to be bound by the Constitution and By-Laws of SOA.
+      </div>
+      <div class="soa-grid">
+
+        <div class="soa-fg soa-col-6">
+          <label class="soa-label">Applicant's Full Name</label>
+          <input class="soa-input" type="text" id="decl_name" name="decl_name"
+                 readonly placeholder="Auto-populated from §1" />
+        </div>
+
+        <div class="soa-fg soa-col-12" id="fg-decl_sig">
+          <label class="soa-label">Handwritten Signature (upload scan) <span class="soa-req">*</span></label>
+          <div class="soa-file-zone"
+               data-field="declaration_signature" data-max-mb="1"
+               data-types="image/jpeg,image/png">
+            <input type="file" id="decl_sig_file" name="decl_sig_file"
+                   accept="image/jpeg,image/png"
+                   data-required="true"
+                   data-err-required="Please upload your signed declaration." />
+            <span class="soa-file-icon">✍️</span>
+            <span class="soa-file-copy">
+              <strong>Click to upload</strong> scanned / photographed signature<br>
+              JPEG or PNG · white background · max 1 MB · min 150 DPI
+            </span>
+          </div>
+          <div class="soa-file-preview" id="fp-decl_sig_file">
+            <img class="soa-file-preview-thumb" id="ft-decl_sig_file" alt="preview" />
+            <span class="soa-file-preview-name" id="fn-decl_sig_file"></span>
+            <button type="button" class="soa-file-rm" data-clears="decl_sig_file" aria-label="Remove">×</button>
+          </div>
+          <span class="soa-err" id="err-decl_sig_file"></span>
+        </div>
+
+      </div>
+    </div><!-- /#s-declaration -->
+
+
+    <!-- ══════════════════════════════════════════
+         §9 MEMBERSHIP AGREEMENT
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-agreement">
+      <h3 class="soa-section-hd">9 · Membership Agreement</h3>
+      <div class="soa-note" style="margin-bottom:14px">
+        By signing below I agree to abide by the rules, regulations and Code of Ethics of the Singapore Optometric Association and to pay the applicable membership fees when due.
+      </div>
+      <div class="soa-grid">
+
+        <div class="soa-fg soa-col-6">
+          <label class="soa-label">Full Name</label>
+          <input class="soa-input" type="text" id="agreement_name" name="agreement_name"
+                 readonly placeholder="Auto-populated from §1" />
+        </div>
+
+        <div class="soa-fg soa-col-12" id="fg-agreement_sig">
+          <label class="soa-label">Signature <span class="soa-req">*</span></label>
+          <div class="soa-sigpad-wrap" id="spw-agreement_sig">
+            <canvas class="soa-sigpad-canvas" id="sp-agreement_sig" data-field="agreement_sig"></canvas>
+            <div class="soa-sigpad-bar">
+              <span class="soa-sigpad-hint">Sign above using mouse, trackpad or touch</span>
+              <button type="button" class="soa-sigpad-clear" data-clears-pad="sp-agreement_sig">Clear</button>
+            </div>
+          </div>
+          <span class="soa-err" id="err-agreement_sig"></span>
+        </div>
+
+      </div>
+    </div><!-- /#s-agreement -->
+
+    <!-- Submit -->
+    <div class="soa-submit-wrap">
+      <button type="submit" class="soa-btn-submit" id="soaSubmitBtn">
+        Submit Application →
+      </button>
+    </div>
+
+  </form><!-- /#soaForm -->
+
+  <!-- Loading overlay -->
+  <div class="soa-overlay" id="soaOverlay">
+    <div class="soa-overlay-box">
+      <div class="soa-spinner"></div>
+      <div class="soa-overlay-title">Submitting your application…</div>
+      <div class="soa-overlay-sub">Please do not close or refresh this page.</div>
+    </div>
+  </div>
+
+  <!-- Success screen -->
+  <div class="soa-success-screen" id="soaSuccess">
+    <div class="soa-success-icon">✓</div>
+    <h2 style="font-size:22px;font-weight:700;color:var(--soa-primary);margin-bottom:6px">
+      Application Submitted
+    </h2>
+    <div class="soa-success-id" id="soaSuccessId"></div>
+    <p class="soa-success-body">
+      Thank you for applying to join the Singapore Optometric Association.
+      Your application has been received and will be reviewed by the Membership Committee.
+      Please retain your Application ID above for reference.
+      You will be contacted via email regarding the outcome.
+    </p>
+  </div>
+
+  <!-- Version badge -->
+  <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
+    <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.0.0</span>
+      SOA Membership Application Form
+    </span>
+  </div>
+
+</div><!-- /#soaWrapper -->
+
+
+<!-- ============================================================
+     SCRIPT
+     ============================================================ -->
+<script>
+(function () {
+'use strict';
+
+/* ─────────────────────────────────────────────────────────────
+   ⚙  CONFIGURATION — TODO: update before going live
+   ───────────────────────────────────────────────────────────── */
+const SOA_CONFIG = {
+  // TODO: replace with your deployed Apps Script web-app URL
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
+};
+
+// TODO: fill in actual SGD fees for each tier
+const MEMBERSHIP_FEES = {
+  Ordinary:      { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
+  Associate:     { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
+  CPE_Affiliate: { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
+  Life:          { entrance: 100.00, annual: 0.00, label: 'Life Membership Fee (one-time)' },
+};
+
+/* ─────────────────────────────────────────────────────────────
+   Country list
+   ───────────────────────────────────────────────────────────── */
+const COUNTRIES = [
+  ['SG','Singapore'],['MY','Malaysia'],['CN','China'],['IN','India'],
+  ['PH','Philippines'],['ID','Indonesia'],['TH','Thailand'],['VN','Vietnam'],
+  ['MM','Myanmar'],['KH','Cambodia'],['LA','Laos'],['BN','Brunei'],
+  ['AU','Australia'],['NZ','New Zealand'],['JP','Japan'],['KR','South Korea'],
+  ['HK','Hong Kong'],['TW','Taiwan'],['MO','Macau'],
+  ['GB','United Kingdom'],['US','United States'],['CA','Canada'],
+  ['FR','France'],['DE','Germany'],['NL','Netherlands'],['CH','Switzerland'],
+  ['SE','Sweden'],['AE','United Arab Emirates'],['SA','Saudi Arabia'],
+  ['BD','Bangladesh'],['PK','Pakistan'],['LK','Sri Lanka'],['NP','Nepal'],
+  ['ZA','South Africa'],['NG','Nigeria'],['EG','Egypt'],
+  ['BR','Brazil'],['MX','Mexico'],
+].sort((a,b) => a[1].localeCompare(b[1]));
+
+/* ─────────────────────────────────────────────────────────────
+   Runtime state
+   ───────────────────────────────────────────────────────────── */
+let sponsorList     = [];          // populated from Apps Script
+let fileDataStore   = {};          // { fieldName: 'data:image/png;base64,...' }
+let signaturePads   = {};          // { canvasId: SignaturePad instance }
+let pdfJsLoaded     = false;
+let sigPadLoaded    = false;
+
+/* ─────────────────────────────────────────────────────────────
+   Helpers
+   ───────────────────────────────────────────────────────────── */
+function $(id)   { return document.getElementById(id); }
+function $$(sel) { return document.querySelectorAll(sel); }
+function fmt(n)  { return 'SGD ' + Number(n).toFixed(2); }
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) return res();
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+/* signUpID format: YYYYDDMM-HHMMSS  (per spec — note DD before MM) */
+function generateSignUpID() {
+  const n  = new Date();
+  const YY = n.getFullYear();
+  const DD = String(n.getDate()).padStart(2,'0');
+  const MM = String(n.getMonth()+1).padStart(2,'0');
+  const HH = String(n.getHours()).padStart(2,'0');
+  const mm = String(n.getMinutes()).padStart(2,'0');
+  const SS = String(n.getSeconds()).padStart(2,'0');
+  return `${YY}${DD}${MM}-${HH}${mm}${SS}`;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Populate country selects
+   ───────────────────────────────────────────────────────────── */
+function populateCountrySelects() {
+  $$('select[id$="_country"]').forEach(sel => {
+    COUNTRIES.forEach(([code, name]) => {
+      const opt = document.createElement('option');
+      opt.value = code; opt.textContent = name;
+      if (code === 'SG') opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Date mask  (DD/MM/YYYY)
+   ───────────────────────────────────────────────────────────── */
+function initDateMasks() {
+  $$('.soa-date-mask').forEach(inp => {
+    inp.addEventListener('input', e => {
+      let v = e.target.value.replace(/\D/g,'');
+      if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+      if (v.length > 5) v = v.slice(0,5) + '/' + v.slice(5);
+      e.target.value = v.slice(0,10);
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Validation engine
+   ───────────────────────────────────────────────────────────── */
+function setError(fieldId, msg) {
+  const fg  = document.getElementById('fg-' + fieldId);
+  const err = document.getElementById('err-' + fieldId);
+  if (!fg) return;
+  fg.classList.add('has-error');
+  if (err) err.textContent = msg;
+}
+function clearError(fieldId) {
+  const fg  = document.getElementById('fg-' + fieldId);
+  const err = document.getElementById('err-' + fieldId);
+  if (!fg) return;
+  fg.classList.remove('has-error');
+  if (err) err.textContent = '';
+}
+
+function isPracticingNow() {
+  const el = document.querySelector('input[name="is_practicing"]:checked');
+  return el && el.value === 'yes';
+}
+function currentPaymentMethod() {
+  const el = document.querySelector('input[name="payment_method"]:checked');
+  return el ? el.value : '';
+}
+
+function validateField(el) {
+  if (!el) return true;
+  const id = el.id || el.name;
+
+  // Conditional required
+  const reqWhen = el.dataset.requiredWhen;
+  if (reqWhen) {
+    const [field, val] = reqWhen.split(':');
+    const actual = field === 'is_practicing' ? (isPracticingNow() ? 'yes' : 'no')
+                 : field === 'payment_method' ? currentPaymentMethod()
+                 : '';
+    if (actual !== val) { clearError(id); return true; }
+  }
+
+  // Radio group
+  if (el.type === 'radio' && el.dataset.group) {
+    const checked = document.querySelector(`input[name="${el.name}"]:checked`);
+    if (!checked) {
+      setError(id, el.dataset.errRequired || 'This field is required.');
+      return false;
+    }
+    clearError(id);
+    return true;
+  }
+
+  // Checkbox required
+  if (el.type === 'checkbox' && el.dataset.required) {
+    if (!el.checked) {
+      setError(id, el.dataset.errRequired || 'This field is required.');
+      return false;
+    }
+    clearError(id);
+    return true;
+  }
+
+  // File required
+  if (el.type === 'file') {
+    if (el.dataset.required && !fileDataStore[el.name]) {
+      setError(id, el.dataset.errRequired || 'Please upload a file.');
+      return false;
+    }
+    clearError(id);
+    return true;
+  }
+
+  // Text / select
+  const val   = el.value.trim();
+  const reqd  = el.dataset.required === 'true';
+  const pat   = el.dataset.pattern;
+
+  if (reqd && val === '') {
+    setError(id, el.dataset.errRequired || 'This field is required.');
+    return false;
+  }
+  if (pat && val !== '' && !new RegExp(pat).test(val)) {
+    setError(id, el.dataset.errPattern || 'Invalid format.');
+    return false;
+  }
+
+  clearError(id);
+  return true;
+}
+
+function validateSignature(canvasId) {
+  const pad = signaturePads[canvasId];
+  const fieldId = canvasId.replace('sp-','') + '';
+  if (!pad) return true;
+  const data = pad.toData();
+  const strokes = data ? data.reduce((acc,s) => acc + s.points.length, 0) : 0;
+  if (pad.isEmpty() || strokes < 10) {
+    setError(fieldId, 'Please provide a signature (draw at least a few strokes).');
+    return false;
+  }
+  clearError(fieldId);
+  return true;
+}
+
+function validateAllFields() {
+  let ok = true;
+
+  // All text/select/textarea with data-required or data-pattern
+  $$('#soaForm [data-required], #soaForm [data-pattern]').forEach(el => {
+    if (!validateField(el)) ok = false;
+  });
+
+  // Radio groups (deduplicate by name)
+  const radioGroups = new Set();
+  $$('#soaForm input[type="radio"][data-group]').forEach(el => {
+    if (radioGroups.has(el.name)) return;
+    radioGroups.add(el.name);
+    if (!validateField(el)) ok = false;
+  });
+
+  // Checkboxes with data-required
+  $$('#soaForm input[type="checkbox"][data-required]').forEach(el => {
+    if (!validateField(el)) ok = false;
+  });
+
+  // File uploads
+  $$('#soaForm input[type="file"][data-required]').forEach(el => {
+    if (!validateField(el)) ok = false;
+  });
+
+  // Signature pads
+  Object.keys(signaturePads).forEach(cid => {
+    if (!validateSignature(cid)) ok = false;
+  });
+
+  return ok;
+}
+
+/* Live validation on blur */
+function attachLiveValidation() {
+  $$('#soaForm input:not([type="file"]):not([type="radio"]):not([type="checkbox"]), #soaForm select, #soaForm textarea').forEach(el => {
+    el.addEventListener('blur',  () => validateField(el));
+    el.addEventListener('input', () => {
+      const fg = document.getElementById('fg-' + el.id);
+      if (fg && fg.classList.contains('has-error')) validateField(el);
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Conditional blocks
+   ───────────────────────────────────────────────────────────── */
+function initConditionals() {
+  // Practice address
+  $$('input[name="is_practicing"]').forEach(r => {
+    r.addEventListener('change', () => {
+      $('cond-practice').classList.toggle('show', r.value === 'yes' && r.checked);
+    });
+  });
+
+  // Payment method
+  $$('input[name="payment_method"]').forEach(r => {
+    r.addEventListener('change', () => {
+      $('cond-cheque').classList.toggle('show',  r.value === 'Cheque'       && r.checked);
+      $('cond-bank').classList.toggle('show',    r.value === 'BankTransfer' && r.checked);
+      $('cond-paynow').classList.toggle('show',  r.value === 'PayNow'       && r.checked);
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Membership fee display
+   ───────────────────────────────────────────────────────────── */
+function initFeeDisplay() {
+  // Set initial tier card prices from config
+  Object.entries(MEMBERSHIP_FEES).forEach(([tier, fees]) => {
+    const el = $('price-' + tier);
+    if (el) el.textContent = 'SGD ' + (fees.entrance + fees.annual).toFixed(2);
+  });
+
+  $$('input[name="membership_type"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const fees = MEMBERSHIP_FEES[r.value];
+      if (!fees) return;
+      $('fee-entrance').textContent    = fmt(fees.entrance);
+      $('fee-membership').textContent  = fmt(fees.annual);
+      $('fee-membership-lbl').textContent = fees.label;
+      $('fee-total').textContent       = fmt(fees.entrance + fees.annual);
+      $('fee-hint').textContent        = '';
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Repeatable organisation entries
+   ───────────────────────────────────────────────────────────── */
+let orgCount = 0;
+function addOrgEntry() {
+  if (orgCount >= 5) return;
+  orgCount++;
+  const idx  = orgCount;
+  const list = $('soa-orgs-list');
+  const div  = document.createElement('div');
+  div.className = 'soa-repeat-item';
+  div.id = 'org-' + idx;
+  div.innerHTML = `
+    <button type="button" class="soa-repeat-rm" aria-label="Remove" onclick="this.closest('.soa-repeat-item').remove(); orgCount--;">×</button>
+    <div class="soa-grid">
+      <div class="soa-fg soa-col-6">
+        <label class="soa-label" for="org_name_${idx}">Organisation Name</label>
+        <input class="soa-input" type="text" id="org_name_${idx}" name="org_name_${idx}"
+               placeholder="e.g. College of Optometrists" />
+      </div>
+      <div class="soa-fg soa-col-6">
+        <label class="soa-label" for="org_dur_${idx}">Length of Membership</label>
+        <input class="soa-input" type="text" id="org_dur_${idx}" name="org_dur_${idx}"
+               placeholder="e.g. 3 years"
+               data-pattern="^\\d+\\s?(years?|months?)$"
+               data-err-pattern="Format: e.g. 3 years or 18 months" />
+        <span class="soa-err" id="err-org_dur_${idx}"></span>
+      </div>
+    </div>`;
+  list.appendChild(div);
+  // expose orgCount for inline handler
+  window.orgCount = orgCount;
+}
+$('btnAddOrg').addEventListener('click', addOrgEntry);
+window.orgCount = 0; // make accessible for inline handler
+
+/* ─────────────────────────────────────────────────────────────
+   Auto-populate read-only name fields
+   ───────────────────────────────────────────────────────────── */
+function syncDerivedNames() {
+  const src = $('fullname_en');
+  const decl = $('decl_name');
+  const agr  = $('agreement_name');
+  if (!src) return;
+  const update = () => {
+    const v = src.value;
+    if (decl) decl.value = v;
+    if (agr)  agr.value  = v;
+  };
+  src.addEventListener('input', update);
+  src.addEventListener('change', update);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Sponsor autocomplete
+   ───────────────────────────────────────────────────────────── */
+function fetchSponsors() {
+  if (!SOA_CONFIG.APPS_SCRIPT_URL || SOA_CONFIG.APPS_SCRIPT_URL.includes('YOUR_DEPLOYMENT_ID')) return;
+  fetch(SOA_CONFIG.APPS_SCRIPT_URL + '?action=getSponsors')
+    .then(r => r.json())
+    .then(data => { if (data.sponsors) sponsorList = data.sponsors; })
+    .catch(() => { /* silent — user can still type manually */ });
+}
+
+function initAutocomplete() {
+  $$('.soa-ac-input').forEach(inp => {
+    const listEl = document.getElementById('ac-' + inp.id);
+    if (!listEl) return;
+    let focused = -1;
+
+    inp.addEventListener('input', () => {
+      const q = inp.value.toLowerCase().trim();
+      listEl.innerHTML = '';
+      focused = -1;
+      if (!q || sponsorList.length === 0) { listEl.classList.remove('open'); return; }
+      const matches = sponsorList.filter(n => n.toLowerCase().includes(q)).slice(0,8);
+      if (!matches.length) { listEl.classList.remove('open'); return; }
+      matches.forEach((name, i) => {
+        const item = document.createElement('div');
+        item.className = 'soa-ac-item';
+        item.textContent = name;
+        item.addEventListener('mousedown', e => {
+          e.preventDefault();
+          inp.value = name;
+          listEl.classList.remove('open');
+          validateField(inp);
+        });
+        listEl.appendChild(item);
+      });
+      listEl.classList.add('open');
+    });
+
+    inp.addEventListener('keydown', e => {
+      const items = listEl.querySelectorAll('.soa-ac-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); focused = Math.min(focused+1, items.length-1); items.forEach((it,i) => it.classList.toggle('focused', i===focused)); }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); focused = Math.max(focused-1, -1); items.forEach((it,i) => it.classList.toggle('focused', i===focused)); }
+      if (e.key === 'Enter' && focused >= 0) { e.preventDefault(); items[focused].dispatchEvent(new Event('mousedown')); }
+      if (e.key === 'Escape') listEl.classList.remove('open');
+    });
+
+    inp.addEventListener('blur', () => setTimeout(() => listEl.classList.remove('open'), 150));
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PDF.js — convert PDF to PNG data URL (first page)
+   ───────────────────────────────────────────────────────────── */
+async function ensurePdfJs() {
+  if (pdfJsLoaded) return;
+  await loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  pdfJsLoaded = true;
+}
+
+async function pdfToDataUrl(file) {
+  await ensurePdfJs();
+  const buf  = await file.arrayBuffer();
+  const doc  = await pdfjsLib.getDocument({ data: buf }).promise;
+  const page = await doc.getPage(1);
+  const vp   = page.getViewport({ scale: 2 });     // 2× for good resolution
+  const cvs  = document.createElement('canvas');
+  cvs.width  = vp.width;
+  cvs.height = vp.height;
+  await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+  return cvs.toDataURL('image/png');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   File upload handling
+   ───────────────────────────────────────────────────────────── */
+async function processFileInput(inputEl, file) {
+  const name     = inputEl.name;
+  const maxMb    = parseFloat(inputEl.closest('.soa-file-zone')?.dataset.maxMb || 10);
+  const types    = (inputEl.closest('.soa-file-zone')?.dataset.types || '').split(',');
+  const minW     = parseInt(inputEl.closest('.soa-file-zone')?.dataset.minW  || 0);
+  const minH     = parseInt(inputEl.closest('.soa-file-zone')?.dataset.minH  || 0);
+
+  // Type check
+  if (types.length && types[0] && !types.includes(file.type)) {
+    setError(name, `Invalid file type. Accepted: ${types.map(t => t.split('/')[1]).join(', ')}.`);
+    return;
+  }
+  // Size check
+  if (file.size > maxMb * 1024 * 1024) {
+    setError(name, `File too large. Maximum size is ${maxMb} MB.`);
+    return;
+  }
+
+  let dataUrl;
+  if (file.type === 'application/pdf') {
+    try {
+      dataUrl = await pdfToDataUrl(file);
+    } catch(err) {
+      setError(name, 'Could not process PDF. Please try a JPEG or PNG instead.');
+      return;
+    }
+  } else {
+    dataUrl = await new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(fr.result);
+      fr.onerror = rej;
+      fr.readAsDataURL(file);
+    });
+  }
+
+  // Dimension check for passport photo
+  if (minW || minH) {
+    const ok = await checkImageDimensions(dataUrl, minW, minH);
+    if (!ok) {
+      setError(name, `Image too small. Minimum size is ${minW} × ${minH} px.`);
+      return;
+    }
+  }
+
+  fileDataStore[name] = dataUrl;
+  clearError(name);
+  showFilePreview(inputEl, file, dataUrl);
+}
+
+function checkImageDimensions(dataUrl, minW, minH) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img.naturalWidth >= minW && img.naturalHeight >= minH);
+    img.onerror = () => res(false);
+    img.src = dataUrl;
+  });
+}
+
+function showFilePreview(inputEl, file, dataUrl) {
+  const name     = inputEl.name;
+  const preview  = document.getElementById('fp-' + inputEl.id);
+  const nameEl   = document.getElementById('fn-' + inputEl.id);
+  const thumbEl  = document.getElementById('ft-' + inputEl.id);
+  if (!preview) return;
+  if (nameEl) nameEl.textContent = file.name;
+  if (thumbEl && dataUrl.startsWith('data:image')) {
+    thumbEl.src = dataUrl;
+    thumbEl.classList.add('show');
+  }
+  preview.classList.add('show');
+}
+
+function clearFileInput(fieldName) {
+  // fieldName is the input's name attribute OR the id
+  const inp = document.querySelector(`input[type="file"][name="${fieldName}"], input[type="file"][id="${fieldName}"]`);
+  if (inp) inp.value = '';
+  delete fileDataStore[fieldName];
+  // clear preview
+  const preview = document.getElementById('fp-' + (inp?.id || fieldName));
+  if (preview) preview.classList.remove('show');
+  const thumb = document.getElementById('ft-' + (inp?.id || fieldName));
+  if (thumb) { thumb.src = ''; thumb.classList.remove('show'); }
+  if (inp) clearError(inp.name);
+}
+
+function initFileZones() {
+  $$('.soa-file-zone input[type="file"]').forEach(inp => {
+    inp.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      await processFileInput(inp, file);
+    });
+  });
+
+  // Drag-and-drop
+  $$('.soa-file-zone').forEach(zone => {
+    zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', async e => {
+      e.preventDefault(); zone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      const inp  = zone.querySelector('input[type="file"]');
+      if (file && inp) await processFileInput(inp, file);
+    });
+  });
+
+  // Remove buttons
+  $$('.soa-file-rm').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.clears;
+      clearFileInput(target);
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Signature pads
+   ───────────────────────────────────────────────────────────── */
+async function initSignaturePads() {
+  if (!sigPadLoaded) {
+    await loadScript('https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js');
+    sigPadLoaded = true;
+  }
+
+  $$('.soa-sigpad-canvas').forEach(cvs => {
+    const pad = new SignaturePad(cvs, {
+      backgroundColor: 'rgb(255,255,255)',
+      penColor:        'rgb(15,15,15)',
+      minWidth: 0.5, maxWidth: 2.5,
+    });
+    signaturePads[cvs.id] = pad;
+    resizePad(cvs, pad);
+  });
+
+  window.addEventListener('resize', () => {
+    $$('.soa-sigpad-canvas').forEach(cvs => {
+      if (signaturePads[cvs.id]) resizePad(cvs, signaturePads[cvs.id]);
+    });
+  });
+
+  // Clear buttons
+  $$('[data-clears-pad]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pad = signaturePads[btn.dataset.clearsPad];
+      if (pad) { pad.clear(); clearError(btn.dataset.clearsPad.replace('sp-','')); }
+    });
+  });
+}
+
+function resizePad(cvs, pad) {
+  const data  = pad.toData();
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  cvs.width   = cvs.offsetWidth  * ratio;
+  cvs.height  = cvs.offsetHeight * ratio;
+  cvs.getContext('2d').scale(ratio, ratio);
+  pad.clear();
+  if (data && data.length) pad.fromData(data);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Section nav highlight (IntersectionObserver)
+   ───────────────────────────────────────────────────────────── */
+function initSectionNav() {
+  const navLinks = $$('#soaSecNav a');
+  const sections = $$('.soa-section[id]');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        navLinks.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + en.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => obs.observe(s));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Collect form data
+   ───────────────────────────────────────────────────────────── */
+function collectOrgs() {
+  const orgs = [];
+  $$('#soa-orgs-list .soa-repeat-item').forEach(item => {
+    const idx  = item.id.replace('org-','');
+    const name = (document.getElementById('org_name_' + idx) || {}).value || '';
+    const dur  = (document.getElementById('org_dur_'  + idx) || {}).value || '';
+    if (name || dur) orgs.push({ name, duration: dur });
+  });
+  return orgs;
+}
+
+function collectPayload(signUpID) {
+  const val = id => ($$(id)[0] ? $$('#soaForm #' + id)[0]?.value || '' : '');
+  const fval = n => ($('#soaForm #' + n) ? $('#' + n).value.trim() : '');
+
+  return {
+    signUpID,
+    personal: {
+      fullname_en: $('fullname_en').value.trim(),
+      fullname_zh: $('fullname_zh').value.trim(),
+      dob:         $('dob').value.trim(),
+      nric:        $('nric').value.trim().toUpperCase(),
+      citizenship: $('citizenship').value.trim(),
+      email:       $('email').value.trim(),
+      oob:         $('oob').value.trim().toUpperCase(),
+    },
+    addresses: {
+      isPracticing: isPracticingNow(),
+      practice: isPracticingNow() ? {
+        name:    $('practice_name').value.trim(),
+        address: $('practice_address').value.trim(),
+        country: $('practice_country').value,
+        tel:     $('practice_tel').value.trim(),
+      } : null,
+      residence: {
+        address:    $('res_address').value.trim(),
+        country:    $('res_country').value,
+        tel_home:   $('tel_home').value.trim(),
+        tel_mobile: $('tel_mobile').value.trim(),
+      },
+    },
+    qualifications: {
+      description:          $('qual_desc').value.trim(),
+      date_of_issue:        $('qual_date').value.trim(),
+      graduate_course:      $('grad_course').value.trim(),
+      graduate_institution: $('grad_inst').value.trim(),
+    },
+    professionalBackground: {
+      organizations:       collectOrgs(),
+      relevant_experience: $('experience').value.trim(),
+    },
+    onlineQuestionnaire: $('online_questionnaire').checked,
+    membership: {
+      type: (document.querySelector('input[name="membership_type"]:checked') || {}).value || '',
+    },
+    payment: (() => {
+      const type   = (document.querySelector('input[name="membership_type"]:checked') || {}).value || '';
+      const fees   = MEMBERSHIP_FEES[type] || { entrance: 0, annual: 0 };
+      const method = currentPaymentMethod();
+      return {
+        entrance_fee:    fees.entrance,
+        membership_fee:  fees.annual,
+        total:           fees.entrance + fees.annual,
+        method,
+        cheque_number:   method === 'Cheque'       ? $('cheque_no').value.trim()  : '',
+        bank_ref:        method === 'BankTransfer'  ? $('bank_ref').value.trim()   : '',
+        paynow_ref:      method === 'PayNow'        ? $('paynow_ref').value.trim() : '',
+      };
+    })(),
+    sponsors: {
+      proposer: {
+        name:          $('proposer_name').value.trim(),
+        is_soa_member: $('proposer_is_soa').checked,
+      },
+      seconder: {
+        name:          $('seconder_name').value.trim(),
+        is_soa_member: $('seconder_is_soa').checked,
+      },
+    },
+    declaration: {
+      name: $('decl_name').value.trim(),
+    },
+    agreement: {
+      name: $('agreement_name').value.trim(),
+    },
+    files: collectFiles(),
+    submittedAt: new Date().toISOString(),
+  };
+}
+
+function collectFiles() {
+  const files = { ...fileDataStore };   // file uploads (converted to PNG data URLs)
+
+  // Signature pads → PNG data URLs
+  Object.entries(signaturePads).forEach(([cid, pad]) => {
+    if (!pad.isEmpty()) {
+      const fieldName = cid.replace(/^sp-/, '') + '_signature'
+                           .replace('_sig_signature', '_signature');
+      // normalise: sp-proposer_sig → proposer_signature, sp-agreement_sig → agreement_signature
+      const clean = cid.replace(/^sp-/, '').replace(/_sig$/, '');
+      files[clean + '_signature'] = pad.toDataURL('image/png');
+    }
+  });
+
+  // Declaration signature file key normalisation
+  if (files['decl_sig_file']) {
+    files['declaration_signature'] = files['decl_sig_file'];
+    delete files['decl_sig_file'];
+  }
+
+  return files;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Form submission
+   ───────────────────────────────────────────────────────────── */
+$('soaForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  // Validate
+  if (!validateAllFields()) {
+    $('soaGlobalError').textContent =
+      'Please correct the highlighted fields before submitting.';
+    $('soaGlobalError').classList.add('show');
+    // scroll to first error
+    const first = document.querySelector('#soaForm .has-error');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  $('soaGlobalError').classList.remove('show');
+
+  const signUpID = generateSignUpID();
+  const payload  = collectPayload(signUpID);
+
+  // Show loading overlay
+  $('soaOverlay').classList.add('show');
+  $('soaSubmitBtn').disabled = true;
+
+  try {
+    // POST to Apps Script (no-cors — Apps Script returns 302 redirect)
+    await fetch(SOA_CONFIG.APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode:   'no-cors',
+      body:   JSON.stringify(payload),
+    });
+  } catch (err) {
+    // Network error — still show success optimistically if the deployment is live
+    console.warn('Fetch error (may be CORS redirect, not a real failure):', err);
+  }
+
+  // Hide overlay, show success
+  $('soaOverlay').classList.remove('show');
+  $('soaForm').classList.add('soa-hidden');
+  $('soaSecNav').classList.add('soa-hidden');
+  $('soaSuccessId').textContent = 'Application ID: ' + signUpID;
+  $('soaSuccess').classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+/* ─────────────────────────────────────────────────────────────
+   Boot
+   ───────────────────────────────────────────────────────────── */
+async function boot() {
+  populateCountrySelects();
+  initDateMasks();
+  initConditionals();
+  initFeeDisplay();
+  syncDerivedNames();
+  initFileZones();
+  attachLiveValidation();
+  initSectionNav();
+  fetchSponsors();
+  initAutocomplete();
+  await Promise.all([initSignaturePads()]);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+
+})(); // IIFE end
+</script>
