@@ -101,6 +101,34 @@ function soa_render_signup_form() {
 
 /**
  * ──────────────────────────────────────────────────────────────────────────
+ * CACHE-BUST REST ENDPOINT
+ * ──────────────────────────────────────────────────────────────────────────
+ * POST /wp-json/soa/v1/bust-cache
+ * Header: X-SOA-Secret: <value of SOA_CACHE_BUST_SECRET in wp-config.php>
+ *
+ * Called automatically by the GitHub Action on every push to main.
+ * To enable, add this to wp-config.php:
+ *   define( 'SOA_CACHE_BUST_SECRET', 'your-random-secret-here' );
+ */
+add_action( 'rest_api_init', function () {
+    register_rest_route( 'soa/v1', '/bust-cache', array(
+        'methods'             => 'POST',
+        'callback'            => 'soa_bust_form_cache',
+        'permission_callback' => '__return_true',
+    ) );
+} );
+
+function soa_bust_form_cache( WP_REST_Request $request ) {
+    $secret = defined( 'SOA_CACHE_BUST_SECRET' ) ? SOA_CACHE_BUST_SECRET : '';
+    if ( ! $secret || $request->get_header( 'X-SOA-Secret' ) !== $secret ) {
+        return new WP_REST_Response( array( 'error' => 'Unauthorized' ), 401 );
+    }
+    delete_transient( 'soa_signup_form_html' );
+    return new WP_REST_Response( array( 'ok' => true, 'message' => 'Cache cleared.' ), 200 );
+}
+
+/**
+ * ──────────────────────────────────────────────────────────────────────────
  * ALTERNATIVE: iframe embed (use if <script>/<style> tags are stripped)
  * ──────────────────────────────────────────────────────────────────────────
  * Some WordPress security setups or page builders strip inline scripts.
