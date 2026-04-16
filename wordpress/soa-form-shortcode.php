@@ -19,7 +19,7 @@ define( 'SOA_FORM_GITHUB_RAW_URL',
 
 // Google Apps Script web-app URL (kept here so it never appears in the public repo).
 define( 'SOA_APPS_SCRIPT_URL',
-    'https://script.google.com/macros/s/AKfycbyUpzgcygP9uT2VVcdI2L7fJ9ZFbteCE2jW-daDLgW-Em92i1EAjTkvnspwQFTZLOk6Cg/exec'
+    'https://script.google.com/macros/s/AKfycbx3QcRL9R18OxZFaZbThzqWjNfouVfqVFVnr--6DIxwr0H3fMze8K0ElUxUuXvK_8tU6A/exec'
 );
 
 // Cache lifetime in seconds. 0 = always fetch fresh (handy during development).
