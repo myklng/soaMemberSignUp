@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.2.2
+  Version : 1.2.3
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -1204,7 +1204,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.2</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.3</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -2026,24 +2026,37 @@ $('soaForm').addEventListener('submit', async e => {
   $('soaSubmitBtn').disabled = true;
 
   try {
-    // POST to Apps Script (no-cors — Apps Script returns 302 redirect)
-    await fetch(SOA_CONFIG.APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode:   'no-cors',
-      body:   JSON.stringify(payload),
+    // text/plain avoids CORS preflight; Apps Script still receives body in e.postData.contents
+    const r = await fetch(SOA_CONFIG.APPS_SCRIPT_URL, {
+      method:   'POST',
+      mode:     'cors',
+      redirect: 'follow',
+      headers:  { 'Content-Type': 'text/plain' },
+      body:     JSON.stringify(payload),
     });
-  } catch (err) {
-    // Network error — still show success optimistically if the deployment is live
-    console.warn('Fetch error (may be CORS redirect, not a real failure):', err);
-  }
 
-  // Hide overlay, show success
-  $('soaOverlay').classList.remove('show');
-  $('soaForm').classList.add('soa-hidden');
-  $('soaSecNav').classList.add('soa-hidden');
-  $('soaSuccessId').textContent = 'Application ID: ' + signUpID;
-  $('soaSuccess').classList.add('show');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!r.ok) throw new Error('Server returned HTTP ' + r.status);
+    const result = await r.json();
+    if (!result.success) throw new Error(result.error || 'Server error — please try again.');
+
+    const confirmedID = result.signUpID || signUpID;
+    $('soaOverlay').classList.remove('show');
+    $('soaForm').classList.add('soa-hidden');
+    $('soaSecNav').classList.add('soa-hidden');
+    $('soaSuccessId').textContent = 'Application ID: ' + confirmedID;
+    $('soaSuccess').classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  } catch (err) {
+    console.error('[SOA] Submission failed:', err.message);
+    $('soaOverlay').classList.remove('show');
+    $('soaSubmitBtn').disabled = false;
+    $('soaGlobalError').textContent =
+      'Submission failed: ' + err.message +
+      ' Please try again or contact us directly if the problem persists.';
+    $('soaGlobalError').classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 });
 
 /* ─────────────────────────────────────────────────────────────
@@ -2069,6 +2082,69 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Console debug tools  —  window.soaDebug
+   Usage:
+     soaDebug.checkConfig()      — show current config & sponsor list status
+     soaDebug.testConnection()   — GET Apps Script, verify sponsor list loads
+     soaDebug.testPost()         — POST a minimal test payload, check Sheet writes
+   ───────────────────────────────────────────────────────────── */
+window.soaDebug = {
+  checkConfig() {
+    console.group('[SOA] Config');
+    console.log('APPS_SCRIPT_URL:', SOA_CONFIG.APPS_SCRIPT_URL);
+    console.log('Sponsor list loaded:', sponsorList.length, 'members',
+      sponsorList.length ? '' : '← EMPTY (fetch may have failed or list is unconfigured)');
+    console.groupEnd();
+  },
+
+  async testConnection() {
+    console.log('[SOA] Testing GET connection (getSponsors)…');
+    try {
+      const r    = await fetch(SOA_CONFIG.APPS_SCRIPT_URL + '?action=getSponsors', { redirect: 'follow' });
+      const data = await r.json();
+      console.log('[SOA] GET response:', data);
+      if (data.sponsors && data.sponsors.length) {
+        console.log('[SOA] ✓ Member list OK —', data.sponsors.length, 'sponsors loaded.');
+      } else {
+        console.warn('[SOA] ✗ Sponsor list empty or missing — check Apps Script SHEET_ID and SHEET_B tab name.');
+      }
+    } catch (err) {
+      console.error('[SOA] GET FAILED:', err.message);
+    }
+  },
+
+  async testPost() {
+    console.log('[SOA] Sending test POST to Apps Script…');
+    const testPayload = {
+      signUpID:   'TEST-' + Date.now(),
+      _isTest:    true,
+      personal:   { fullname_en: 'Console Test', email: 'test@test.com' },
+      submittedAt: new Date().toISOString(),
+    };
+    try {
+      const r    = await fetch(SOA_CONFIG.APPS_SCRIPT_URL, {
+        method:   'POST',
+        mode:     'cors',
+        redirect: 'follow',
+        headers:  { 'Content-Type': 'text/plain' },
+        body:     JSON.stringify(testPayload),
+      });
+      const data = await r.json();
+      console.log('[SOA] POST response:', data);
+      if (data.success) {
+        console.log('[SOA] ✓ POST OK — signUpID confirmed by server:', data.signUpID);
+      } else {
+        console.warn('[SOA] ✗ POST returned error:', data.error,
+          '\n→ Check Apps Script SHEET_ID and DRIVE_FOLDER_ID are set correctly.');
+      }
+    } catch (err) {
+      console.error('[SOA] POST FAILED:', err.message);
+    }
+  },
+};
+console.log('[SOA] Debug tools ready. Try: soaDebug.checkConfig() | soaDebug.testConnection() | soaDebug.testPost()');
 
 })(); // IIFE end
 </script>
