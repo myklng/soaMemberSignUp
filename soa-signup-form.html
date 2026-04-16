@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.2.1
+  Version : 1.2.2
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -1043,7 +1043,7 @@
           </div>
           <span class="soa-err" id="err-proposer_name"></span>
         </div>
-        <div class="soa-fg soa-col-4">
+        <div class="soa-fg soa-col-4" id="fg-proposer_is_soa">
           <button type="button" class="soa-confirm-btn" id="btn-proposer_is_soa"
                   data-confirms="proposer_is_soa">Confirm: SOA Member</button>
           <input type="hidden" id="proposer_is_soa" name="proposer_is_soa" value=""
@@ -1081,7 +1081,7 @@
           </div>
           <span class="soa-err" id="err-seconder_name"></span>
         </div>
-        <div class="soa-fg soa-col-4">
+        <div class="soa-fg soa-col-4" id="fg-seconder_is_soa">
           <button type="button" class="soa-confirm-btn" id="btn-seconder_is_soa"
                   data-confirms="seconder_is_soa">Confirm: SOA Member</button>
           <input type="hidden" id="seconder_is_soa" name="seconder_is_soa" value=""
@@ -1204,7 +1204,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.1</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.2.2</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -1323,15 +1323,13 @@ function initDateMasks() {
 function setError(fieldId, msg) {
   const fg  = document.getElementById('fg-' + fieldId);
   const err = document.getElementById('err-' + fieldId);
-  if (!fg) return;
-  fg.classList.add('has-error');
+  if (fg) fg.classList.add('has-error');
   if (err) err.textContent = msg;
 }
 function clearError(fieldId) {
   const fg  = document.getElementById('fg-' + fieldId);
   const err = document.getElementById('err-' + fieldId);
-  if (!fg) return;
-  fg.classList.remove('has-error');
+  if (fg) fg.classList.remove('has-error');
   if (err) err.textContent = '';
 }
 
@@ -1457,7 +1455,7 @@ function validateAllFields() {
 
 /* Live validation on blur */
 function attachLiveValidation() {
-  $$('#soaForm input:not([type="file"]):not([type="radio"]):not([type="checkbox"]), #soaForm select, #soaForm textarea').forEach(el => {
+  $$('#soaForm input:not([type="file"]):not([type="radio"]):not([type="checkbox"]):not([type="hidden"]), #soaForm select, #soaForm textarea').forEach(el => {
     el.addEventListener('blur',  () => validateField(el));
     el.addEventListener('input', () => {
       const fg = document.getElementById('fg-' + el.id);
