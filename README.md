@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.0.0**
+**Version 1.2.4**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -34,7 +34,7 @@ That package is sent over the internet to a Google Apps Script
 (think of it like a robot sitting inside Google's servers, waiting for mail)
         │
         ├──▶  Robot saves all the photos & signatures to a Google Drive folder
-        │     (each file is named with a unique ID so nothing gets mixed up)
+        │     (each file is named with a unique ID + applicant initials)
         │
         └──▶  Robot writes one new row in a Google Sheet
               (like adding a new row to a spreadsheet — one row per applicant)
@@ -173,14 +173,14 @@ Fees are calculated automatically from the membership type selected.
 
 ### §7 · Sponsors
 
-Both sponsors must be current SOA members. Their names are suggested from the SOA member list (pulled live from Google Sheets).
+Both sponsors must be current SOA members. Names are suggested via autocomplete from the SOA member list (pulled live from the `MemberList` tab in Google Sheets).
 
 **Proposer:**
 
 | Field | Required | Notes |
 |---|---|---|
 | Full Name | ✴ | Autocomplete from SOA member list |
-| Confirm SOA Member | ✴ | Checkbox |
+| Confirm SOA Member | ✴ | Button — green if selected from list, amber if manually confirmed |
 | Signature | ✴ | Drawn on-screen signature pad · min 10 stroke points |
 
 **Seconder:** same fields as Proposer.
@@ -194,7 +194,7 @@ Both sponsors must be current SOA members. Their names are suggested from the SO
 | Field | Required | Notes |
 |---|---|---|
 | Applicant Full Name | Auto | Read-only, copied from §1 |
-| Handwritten Signature | ✴ | Upload scanned / photographed signature · JPEG or PNG · max 1 MB |
+| Declaration Agreement | ✴ | Checkbox confirmation |
 
 ---
 
@@ -224,10 +224,25 @@ Example : 20261604-143022
                        ^^ Second 22
 ```
 
-This ID is used to:
-- Name every uploaded file: `20261604-143022_passport_photo.png`
-- Identify the row in Google Sheets
-- Show the applicant a reference number on the success screen
+---
+
+## Drive File Naming
+
+Uploaded files are saved to Google Drive with this naming convention:
+
+```
+{signUpID}_{initials}_{type}.{ext}
+
+Example (applicant: John Smith Tan, ID: 20261604-143022):
+  20261604-143022_JST_passport_photo.png
+  20261604-143022_JST_qualification_photocopy.png
+  20261604-143022_JST_payment_proof.png
+  20261604-143022_JST_proposer_signature.png
+  20261604-143022_JST_seconder_signature.png
+  20261604-143022_JST_agreement_signature.png
+```
+
+All Drive files are set to **view-only / anyone with link** so the Sheet URL columns are clickable.
 
 ---
 
@@ -242,7 +257,7 @@ This ID is used to:
    const CONFIG = {
      SHEET_ID:        'your-google-sheet-id',
      SHEET_A:         'Applications',   // tab name for submissions
-     SHEET_B:         'Sponsors',       // tab name with member names in column A
+     SHEET_B:         'MemberList',     // tab name with member names in column A (no header row)
      DRIVE_FOLDER_ID: 'your-drive-folder-id',
    };
    ```
@@ -251,53 +266,47 @@ This ID is used to:
    - Who has access: **Anyone**
 5. Copy the deployment URL
 
-### 2 · The Form
-
-Open `soa-signup-form.html` and update the config at the top of the `<script>` section:
-
-```js
-const SOA_CONFIG = {
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
-};
-
-const MEMBERSHIP_FEES = {
-  Ordinary:      { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
-  Associate:     { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
-  CPE_Affiliate: { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
-  Life:          { entrance: 100.00, annual: 0.00, label: 'Life Membership Fee (one-time)' },
-  // TODO: fill in actual SGD amounts
-};
-```
-
-### 3 · WordPress
+### 2 · WordPress Shortcode
 
 1. Open `wordpress/soa-form-shortcode.php`
-2. Confirm `SOA_FORM_GITHUB_RAW_URL` points to the raw file in this repo:
+2. Update the config block at the top of the file:
+   ```php
+   define( 'SOA_FORM_GITHUB_RAW_URL', 'https://raw.githubusercontent.com/myklng/soaMemberSignUp/main/soa-signup-form.html' );
+   define( 'SOA_APPS_SCRIPT_URL',     'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec' );
+   define( 'SOA_FORM_CACHE_TTL',      300 );
    ```
-   https://raw.githubusercontent.com/myklng/soaMemberSignUp/main/soa-signup-form.html
-   ```
-3. Paste the file into your theme's `functions.php` (or a site-specific plugin)
-4. Add `[soa_signup_form]` to any WordPress page — the form will appear
+3. Paste into **Code Snippets** plugin (or `functions.php`)
+4. Add `[soa_signup_form]` to any WordPress page
+
+### 3 · Cache-Bust on Deploy (optional)
+
+A GitHub Action in `.github/workflows/bust-cache.yml` automatically clears the WordPress transient cache on every push to `main` that changes `soa-signup-form.html`.
+
+Requires two GitHub repository secrets:
+- `SOA_CACHE_BUST_SECRET` — random secret, also added to `wp-config.php` as `define('SOA_CACHE_BUST_SECRET', '...')`
+- `WP_SITE_URL` — your WordPress site URL, e.g. `https://yoursite.org`
 
 ---
 
-## What Happens After Submit
+## Console Debug Tools
 
-```
-Google Sheets (SheetA "Applications")
-  └─ New row with all form data + links to Drive files
+Open the browser console on the form page to access:
 
-Google Drive (your folder)
-  └─ 20261604-143022_passport_photo.png
-  └─ 20261604-143022_qualification_photocopy.png
-  └─ 20261604-143022_payment_proof.png
-  └─ 20261604-143022_declaration_signature.png
-  └─ 20261604-143022_proposer_signature.png
-  └─ 20261604-143022_seconder_signature.png
-  └─ 20261604-143022_agreement_signature.png
+```js
+soaDebug.checkConfig()       // show current Apps Script URL and sponsor list status
+soaDebug.testConnection()    // GET Apps Script — verify sponsor list loads
+soaDebug.testPost()          // POST test payload — verify Sheet writes end-to-end
 ```
 
-All Drive files are set to **view-only / anyone with link** so the Sheet URL columns are clickable.
+---
+
+## Testing the Backend (Apps Script IDE)
+
+1. Open your Apps Script project
+2. Select `_testPost` from the function dropdown
+3. Click **Run**
+4. Check **Execution log** — should show `{ success: true, signUpID: "..." }`
+5. Verify a new row appears in the Applications sheet and files in Drive
 
 ---
 
@@ -308,19 +317,7 @@ All Drive files are set to **view-only / anyone with link** so the Sheet URL col
 | [signature_pad](https://github.com/szimek/signature_pad) | 4.1.7 | Canvas-based on-screen signature drawing |
 | [PDF.js](https://mozilla.github.io/pdf.js/) | 3.11.174 | Client-side PDF → PNG conversion before upload |
 
-Both are loaded from the jsDelivr CDN at runtime — no npm, no build step required.
-
----
-
-## Testing the Backend
-
-Before going live, run the built-in smoke test inside the Apps Script IDE:
-
-1. Open your Apps Script project
-2. Select the function `_testPost` from the dropdown
-3. Click **Run**
-4. Check **Execution log** — you should see `{ success: true, signUpID: "..." }`
-5. Verify a new row appears in SheetA and files appear in your Drive folder
+Both loaded from jsDelivr CDN — no npm, no build step required.
 
 ---
 

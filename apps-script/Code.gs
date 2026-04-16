@@ -83,7 +83,8 @@ function doPost(e) {
     const signUpID = data.signUpID || generateFallbackID_();
 
     // 1. Upload files to Drive
-    const fileUrls = saveFilesToDrive_(data.files || {}, signUpID);
+    const fullname_en = (data.personal || {}).fullname_en || '';
+    const fileUrls = saveFilesToDrive_(data.files || {}, signUpID, fullname_en);
 
     // 2. Append row to Sheet A
     appendToSheet_(data, fileUrls, signUpID);
@@ -106,9 +107,9 @@ function getSponsors_() {
     if (!sheet) return { sponsors: [] };
 
     const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return { sponsors: [] };
+    if (lastRow < 1) return { sponsors: [] };
 
-    const values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    const values = sheet.getRange(1, 1, lastRow, 1).getValues();
     const sponsors = values
       .map(row => (row[0] || '').toString().trim())
       .filter(Boolean);
@@ -124,7 +125,16 @@ function getSponsors_() {
 // Save base64 files to Google Drive
 // Returns { fieldName: driveFileUrl, ... }
 // ─────────────────────────────────────────────────────────────────────────────
-function saveFilesToDrive_(files, signUpID) {
+function getInitials_(name) {
+  return (name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase())
+    .join('');
+}
+
+function saveFilesToDrive_(files, signUpID, fullname_en) {
   const urls = {};
 
   if (!files || typeof files !== 'object') return urls;
@@ -137,12 +147,13 @@ function saveFilesToDrive_(files, signUpID) {
     return urls;
   }
 
+  const initials = getInitials_(fullname_en) || 'XX';
+
   // File field → Drive file name suffix
   const fieldSuffixMap = {
     passport_photo:         'passport_photo',
     qual_photocopy:         'qualification_photocopy',
     payment_proof:          'payment_proof',
-    declaration_signature:  'declaration_signature',
     proposer_signature:     'proposer_signature',
     seconder_signature:     'seconder_signature',
     agreement_signature:    'agreement_signature',
@@ -152,7 +163,7 @@ function saveFilesToDrive_(files, signUpID) {
     if (!dataUrl || typeof dataUrl !== 'string') return;
     try {
       const suffix   = fieldSuffixMap[fieldName] || fieldName;
-      const filename = `${signUpID}_${suffix}`;
+      const filename = `${signUpID}_${initials}_${suffix}`;
       const file     = saveDataUrlToDrive_(dataUrl, filename, folder);
       urls[fieldName] = file.getUrl();
     } catch (err) {
