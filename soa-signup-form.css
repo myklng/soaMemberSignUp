@@ -457,3 +457,68 @@
 .soa-divider { border: none; border-top: 1px solid var(--soa-border); margin: 16px 0; }
 .soa-hidden  { display: none !important; }
 .soa-sub-hd  { font-size: 13px; font-weight: 600; color: var(--soa-primary); margin: 14px 0 8px; }
+
+/* ----- Profile picture cropper (§6) ----- */
+.soa-photo-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 40px 24px;
+  border: 2px dashed var(--soa-border); border-radius: var(--soa-radius-md);
+  background: #fff; cursor: pointer; text-align: center;
+  font-size: 14px; transition: border-color .2s, background .2s; user-select: none;
+}
+.soa-photo-dropzone:hover,
+.soa-photo-dropzone.drag-over { border-color: var(--soa-primary); background: var(--soa-primary-lt); }
+.soa-photo-dropzone-icon { font-size: 36px; line-height: 1; display: block; margin-bottom: 4px; }
+.soa-photo-dropzone-hint { font-size: 12px; color: var(--soa-muted); }
+.soa-fg.has-error .soa-photo-dropzone { border-color: var(--soa-error); background: var(--soa-error-bg); }
+
+.soa-photo-crop-wrap {
+  border-radius: var(--soa-radius-md); overflow: hidden;
+  background: #111; max-height: 420px; line-height: 0;
+}
+/* Circular crop-box overlay — visually shows how it looks as a profile picture */
+.soa-photo-crop-wrap .cropper-view-box,
+.soa-photo-crop-wrap .cropper-face { border-radius: 50%; }
+.soa-photo-crop-wrap .cropper-view-box { outline-color: rgba(13,115,119,.85); }
+.soa-photo-crop-wrap .cropper-line,
+.soa-photo-crop-wrap .cropper-point  { display: none; }
+
+.soa-photo-controls {
+  display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap;
+}
+.soa-photo-zoom-icon { font-size: 18px; color: var(--soa-muted); flex-shrink: 0; user-select: none; }
+.soa-photo-zoom-range {
+  flex: 1; min-width: 80px; -webkit-appearance: none; appearance: none;
+  height: 4px; border-radius: 2px; cursor: pointer; outline: none;
+  background: linear-gradient(
+    to right,
+    var(--soa-primary) 0%,
+    var(--soa-primary) var(--zoom-pct, 0%),
+    var(--soa-border)  var(--zoom-pct, 0%)
+  );
+}
+.soa-photo-zoom-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--soa-primary); cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.soa-photo-zoom-range::-moz-range-thumb {
+  width: 16px; height: 16px; border: none;
+  border-radius: 50%; background: var(--soa-primary); cursor: pointer;
+}
+.soa-photo-action-link {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 12px; color: var(--soa-muted); text-decoration: underline; padding: 0;
+  flex-shrink: 0; white-space: nowrap;
+}
+.soa-photo-action-link:hover { color: var(--soa-primary); }
+
+.soa-photo-confirmed {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px; background: var(--soa-bg-alt);
+  border: 1px solid var(--soa-border); border-radius: var(--soa-radius-md);
+}
+.soa-photo-confirmed-img {
+  width: 72px; height: 72px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--soa-primary); flex-shrink: 0;
+}

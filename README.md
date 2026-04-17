@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.3.0**
+**Version 1.3.1**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -167,11 +167,13 @@ Fees are calculated automatically from the membership type selected.
 
 ---
 
-### §6 · Passport-Size Photo
+### §6 · Profile Picture
 
 | Field | Required | Notes |
 |---|---|---|
-| Passport Photo | ✴ | JPEG or PNG · min **400 × 514 px** · max 2 MB · white background · taken within 6 months |
+| Profile Picture | ✴ | JPEG or PNG · max 5 MB · white background · taken within 6 months |
+
+The upload zone includes an interactive **1:1 image cropper** (Cropper.js via CDN). The user can drag to reposition and zoom with a slider. A circular overlay shows how the photo will appear as a profile image. The final output is a **1000 × 1000 px PNG** stored in-browser and submitted with the form.
 
 ---
 
@@ -320,6 +322,7 @@ soaDebug.testPost()          // POST test payload — verify Sheet writes end-to
 |---|---|---|
 | [signature_pad](https://github.com/szimek/signature_pad) | 4.1.7 | Canvas-based on-screen signature drawing |
 | [PDF.js](https://mozilla.github.io/pdf.js/) | 3.11.174 | Client-side PDF → PNG conversion before upload |
+| [Cropper.js](https://github.com/fengyuanchen/cropperjs) | 1.6.2 | Interactive 1:1 image cropper with circular mask (§6 Profile Picture) |
 
 Both loaded from jsDelivr CDN — no npm, no build step required.
 

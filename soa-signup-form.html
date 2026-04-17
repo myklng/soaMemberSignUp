@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.3.0
+  Version : 1.3.1
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -26,7 +26,7 @@
     <a href="#s-quals">3 · Qualifications</a>
     <a href="#s-membership">4 · Membership</a>
     <a href="#s-payment">5 · Payment</a>
-    <a href="#s-photo">6 · Photo</a>
+    <a href="#s-photo">6 · Profile Pic</a>
     <a href="#s-sponsors">7 · Sponsors</a>
     <a href="#s-declaration">8 · Declaration</a>
     <a href="#s-agreement">9 · Agreement</a>
@@ -527,34 +527,58 @@
 
 
     <!-- ══════════════════════════════════════════
-         §6 PASSPORT PHOTO
+         §6 PROFILE PICTURE
          ══════════════════════════════════════════ -->
     <div class="soa-section" id="s-photo">
-      <h3 class="soa-section-hd">6 · Passport-Size Photo</h3>
+      <h3 class="soa-section-hd">6 · Profile Picture</h3>
       <div class="soa-note" style="margin-bottom:14px">
-        White background · face centred · taken within the last 6 months · min 400 × 514 px · JPEG or PNG · max 2 MB
+        White background · face centred · taken within the last 6 months · JPEG or PNG · max 5 MB
       </div>
       <div class="soa-fg" id="fg-passport_photo">
-        <label class="soa-label">Upload Photo <span class="soa-req">*</span></label>
-        <div class="soa-file-zone"
-             data-field="passport_photo" data-max-mb="2"
-             data-types="image/jpeg,image/png"
-             data-min-w="400" data-min-h="514">
-          <input type="file" id="passport_photo" name="passport_photo"
-                 accept="image/jpeg,image/png"
-                 data-required="true"
-                 data-err-required="Please upload your passport-size photo." />
-          <span class="soa-file-icon">🪪</span>
-          <span class="soa-file-copy">
-            <strong>Click to upload</strong> or drag &amp; drop<br>
-            JPEG or PNG · min 400 × 514 px · max 2 MB
-          </span>
+        <label class="soa-label">Profile Picture <span class="soa-req">*</span></label>
+
+        <!-- Hidden file input — triggers OS file picker -->
+        <input type="file" id="passport_photo" name="passport_photo"
+               accept="image/jpeg,image/png,image/webp"
+               data-required="true"
+               data-err-required="Please upload your profile picture."
+               style="display:none" />
+
+        <!-- State 0: drop zone -->
+        <div class="soa-photo-dropzone" id="photo-dropzone">
+          <span class="soa-photo-dropzone-icon">👤</span>
+          <span><strong>Click to upload</strong> or drag &amp; drop</span>
+          <span class="soa-photo-dropzone-hint">JPEG or PNG · max 5 MB</span>
         </div>
-        <div class="soa-file-preview" id="fp-passport_photo">
-          <img class="soa-file-preview-thumb" id="ft-passport_photo" alt="preview" />
-          <span class="soa-file-preview-name" id="fn-passport_photo"></span>
-          <button type="button" class="soa-file-rm" data-clears="passport_photo" aria-label="Remove">×</button>
+
+        <!-- State 1: Cropper.js editor -->
+        <div id="photo-editor" style="display:none">
+          <div class="soa-photo-crop-wrap">
+            <img id="photo-crop-img" alt="" style="max-width:100%;display:block" />
+          </div>
+          <div class="soa-photo-controls">
+            <span class="soa-photo-zoom-icon" aria-hidden="true">−</span>
+            <input type="range" id="photo-zoom" class="soa-photo-zoom-range"
+                   min="0" max="3" step="0.01" value="0" />
+            <span class="soa-photo-zoom-icon" aria-hidden="true">+</span>
+            <button type="button" class="soa-photo-action-link" id="photo-change-btn">Change photo</button>
+            <button type="button" class="soa-btn-submit" id="photo-crop-btn"
+                    style="padding:9px 22px;font-size:13px;margin-left:auto">✓ Crop &amp; Save</button>
+          </div>
+          <p class="soa-hint" style="text-align:center;margin-top:8px">
+            Drag to reposition · scroll or use slider to zoom · circle shows how it will appear as a profile image
+          </p>
         </div>
+
+        <!-- State 2: confirmed -->
+        <div id="photo-confirmed" style="display:none" class="soa-photo-confirmed">
+          <img id="photo-confirmed-img" class="soa-photo-confirmed-img" alt="Profile picture preview" />
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--soa-success);margin-bottom:6px">✓ Profile picture saved</div>
+            <button type="button" class="soa-photo-action-link" id="photo-rechange-btn">Change photo</button>
+          </div>
+        </div>
+
         <span class="soa-err" id="err-passport_photo"></span>
       </div>
     </div><!-- /#s-photo -->
@@ -746,7 +770,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.3.0</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.3.1</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -1602,6 +1626,138 @@ $('soaForm').addEventListener('submit', async e => {
 });
 
 /* ─────────────────────────────────────────────────────────────
+   Profile picture cropper  (§6)
+   Uses Cropper.js loaded on demand from CDN.
+   ───────────────────────────────────────────────────────────── */
+let photoCropper = null;
+let photoMinZoom = 1;
+const PHOTO_OUTPUT_PX = 1000; // 1000×1000 px PNG — high-res, 1:1 square
+
+async function ensureCropperJs() {
+  if (window.Cropper) return;
+  if (!document.querySelector('link[data-soa-cropper]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.setAttribute('data-soa-cropper', '1');
+    link.href = 'https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css';
+    document.head.appendChild(link);
+  }
+  await loadScript('https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js');
+}
+
+function initPhotoCropper() {
+  const dropzone     = $('photo-dropzone');
+  const editor       = $('photo-editor');
+  const confirmed    = $('photo-confirmed');
+  const fileInput    = $('passport_photo');
+  const cropImg      = $('photo-crop-img');
+  const zoomSlider   = $('photo-zoom');
+  const cropBtn      = $('photo-crop-btn');
+  const changeBtn    = $('photo-change-btn');
+  const rechangeBtn  = $('photo-rechange-btn');
+  const confirmedImg = $('photo-confirmed-img');
+
+  function showState(state) {
+    dropzone.style.display  = state === 'upload'    ? '' : 'none';
+    editor.style.display    = state === 'editor'    ? '' : 'none';
+    confirmed.style.display = state === 'confirmed' ? '' : 'none';
+  }
+
+  function updateZoomSlider(t) {
+    zoomSlider.style.setProperty('--zoom-pct', ((t / 3) * 100) + '%');
+  }
+
+  async function loadFile(file) {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('passport_photo', 'Please upload a JPEG or PNG image.'); return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('passport_photo', 'Image must be under 5 MB.'); return;
+    }
+    clearError('passport_photo');
+    await ensureCropperJs();
+    const reader = new FileReader();
+    reader.onload = ev => {
+      if (photoCropper) { photoCropper.destroy(); photoCropper = null; }
+      cropImg.src = ev.target.result;
+      showState('editor');
+      zoomSlider.value = 0;
+      updateZoomSlider(0);
+      photoCropper = new Cropper(cropImg, {
+        aspectRatio: 1,
+        viewMode: 3,              // image always fills crop box
+        dragMode: 'move',
+        cropBoxMovable: false,
+        cropBoxResizable: false,
+        toggleDragModeOnDblclick: false,
+        guides: false,
+        center: false,
+        highlight: false,
+        background: false,
+        autoCropArea: 0.85,
+        ready() {
+          const id = photoCropper.getImageData();
+          const cd = photoCropper.getCanvasData();
+          photoMinZoom = Math.max(cd.width / id.naturalWidth, cd.height / id.naturalHeight);
+        },
+        zoom(ev) {
+          if (ev.detail.ratio < photoMinZoom) ev.preventDefault();
+        },
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Upload triggers
+  dropzone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+  // Drag & drop onto drop zone
+  dropzone.addEventListener('dragover',  e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag-over');
+    loadFile(e.dataTransfer.files[0]);
+  });
+
+  // Zoom slider
+  zoomSlider.addEventListener('input', () => {
+    if (!photoCropper) return;
+    const t = parseFloat(zoomSlider.value);
+    updateZoomSlider(t);
+    photoCropper.zoomTo(photoMinZoom * (1 + t));
+  });
+
+  // Crop & Save — outputs 1000×1000 PNG into fileDataStore
+  cropBtn.addEventListener('click', () => {
+    if (!photoCropper) return;
+    const canvas = photoCropper.getCroppedCanvas({
+      width:  PHOTO_OUTPUT_PX,
+      height: PHOTO_OUTPUT_PX,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: 'high',
+    });
+    const dataUrl = canvas.toDataURL('image/png');
+    fileDataStore['passport_photo'] = dataUrl;
+    clearError('passport_photo');
+    confirmedImg.src = dataUrl;
+    showState('confirmed');
+    photoCropper.destroy(); photoCropper = null;
+  });
+
+  // Change photo
+  function resetCropper() {
+    fileInput.value = '';
+    delete fileDataStore['passport_photo'];
+    if (photoCropper) { photoCropper.destroy(); photoCropper = null; }
+    showState('upload');
+  }
+  changeBtn.addEventListener('click', resetCropper);
+  rechangeBtn.addEventListener('click', resetCropper);
+}
+
+/* ─────────────────────────────────────────────────────────────
    Boot
    ───────────────────────────────────────────────────────────── */
 async function boot() {
@@ -1613,6 +1769,7 @@ async function boot() {
   initFileZones();
   attachLiveValidation();
   initSectionNav();
+  initPhotoCropper();
   fetchSponsors();
   initAutocomplete();
   initConfirmButtons();
