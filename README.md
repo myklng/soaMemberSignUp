@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.3.1**
+**Version 1.3.2**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.

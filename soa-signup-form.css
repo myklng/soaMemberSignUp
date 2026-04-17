@@ -482,6 +482,15 @@
 .soa-photo-crop-wrap .cropper-view-box { outline-color: rgba(13,115,119,.85); }
 .soa-photo-crop-wrap .cropper-line,
 .soa-photo-crop-wrap .cropper-point  { display: none; }
+/* L-shaped corner brackets — show the 1:1 square save boundary alongside the circular preview */
+.soa-crop-corner {
+  position: absolute; width: 14px; height: 14px;
+  border-color: rgba(255,255,255,.85); border-style: solid; pointer-events: none; z-index: 10;
+}
+.soa-crop-corner--tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+.soa-crop-corner--tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+.soa-crop-corner--bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+.soa-crop-corner--br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
 
 .soa-photo-controls {
   display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap;
