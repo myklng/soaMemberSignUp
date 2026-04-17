@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.2.4**
+**Version 1.3.0**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -51,11 +51,15 @@ That's it! The club admin can open Google Sheets at any time and see every appli
 
 ```
 soaMemberSignUp/
-├── soa-signup-form.html        ← The form (HTML + CSS + JS, all in one file)
+├── soa-signup-form.html        ← Form markup + JavaScript
+├── soa-signup-form.css         ← Form styles (fetched and inlined by the shortcode)
 ├── apps-script/
 │   └── Code.gs                 ← Google Apps Script backend (runs inside Google)
 ├── wordpress/
 │   └── soa-form-shortcode.php  ← Paste into WordPress to embed the form
+├── .github/
+│   └── workflows/
+│       └── bust-cache.yml      ← Auto-clears WordPress cache on push to main
 └── README.md                   ← You are here
 ```
 

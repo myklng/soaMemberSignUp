@@ -17,6 +17,11 @@ define( 'SOA_FORM_GITHUB_RAW_URL',
     'https://raw.githubusercontent.com/myklng/soaMemberSignUp/main/soa-signup-form.html'
 );
 
+// Raw URL of the form CSS file (fetched and inlined at render time).
+define( 'SOA_CSS_GITHUB_RAW_URL',
+    'https://raw.githubusercontent.com/myklng/soaMemberSignUp/main/soa-signup-form.css'
+);
+
 // Google Apps Script web-app URL (kept here so it never appears in the public repo).
 define( 'SOA_APPS_SCRIPT_URL',
     'https://script.google.com/macros/s/AKfycbx3QcRL9R18OxZFaZbThzqWjNfouVfqVFVnr--6DIxwr0H3fMze8K0ElUxUuXvK_8tU6A/exec'
@@ -43,34 +48,44 @@ function soa_render_signup_form() {
         return soa_inject_config( $cached );
     }
 
-    $response = wp_remote_get(
-        SOA_FORM_GITHUB_RAW_URL,
-        array(
-            'timeout'    => 15,
-            'user-agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . home_url(),
-        )
+    $wp_ua = array(
+        'timeout'    => 15,
+        'user-agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . home_url(),
     );
 
+    // Fetch HTML
+    $response = wp_remote_get( SOA_FORM_GITHUB_RAW_URL, $wp_ua );
     if ( is_wp_error( $response ) ) {
-        error_log( '[SOA Form] Failed to fetch form from GitHub: ' . $response->get_error_message() );
+        error_log( '[SOA Form] Failed to fetch form HTML from GitHub: ' . $response->get_error_message() );
         return '<p class="soa-load-error" style="color:#dc2626;padding:12px;border:1px solid #fca5a5;border-radius:4px;">'
              . 'The membership application form is temporarily unavailable. Please try again later or '
              . '<a href="mailto:admin@soa.org.sg">contact us</a> directly.'
              . '</p>';
     }
-
     $http_code = wp_remote_retrieve_response_code( $response );
     if ( $http_code !== 200 ) {
-        error_log( '[SOA Form] GitHub returned HTTP ' . $http_code );
+        error_log( '[SOA Form] GitHub returned HTTP ' . $http_code . ' for HTML' );
         return '<p class="soa-load-error">The membership form could not be loaded (HTTP ' . esc_html( $http_code ) . ').</p>';
     }
-
     $html = wp_remote_retrieve_body( $response );
-
     if ( strpos( $html, 'soa-form-wrapper' ) === false ) {
         error_log( '[SOA Form] Unexpected response body from GitHub.' );
         return '<p class="soa-load-error">The membership form returned an unexpected response.</p>';
     }
+
+    // Fetch CSS and inline it — do not cache if CSS is unavailable
+    $css_response = wp_remote_get( SOA_CSS_GITHUB_RAW_URL, $wp_ua );
+    if ( is_wp_error( $css_response ) || wp_remote_retrieve_response_code( $css_response ) !== 200 ) {
+        error_log( '[SOA Form] Could not fetch CSS from GitHub — serving without cache.' );
+        return soa_inject_config( str_replace( '%%SOA_STYLES%%', '', $html ) );
+    }
+    $css  = wp_remote_retrieve_body( $css_response );
+    if ( empty( trim( $css ) ) ) {
+        error_log( '[SOA Form] CSS body was empty — serving without cache.' );
+        return soa_inject_config( str_replace( '%%SOA_STYLES%%', '', $html ) );
+    }
+
+    $html = str_replace( '%%SOA_STYLES%%', $css, $html );
 
     if ( SOA_FORM_CACHE_TTL > 0 ) {
         set_transient( $cache_key, $html, SOA_FORM_CACHE_TTL );
