@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.3.2
+  Version : 1.3.3
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -357,51 +357,7 @@
 
       <div class="soa-fg" id="fg-membership_type">
         <label class="soa-label">Select a membership category <span class="soa-req">*</span></label>
-        <div class="soa-tier-grid" style="margin-top:10px">
-
-          <div>
-            <input class="soa-tier-input" type="radio" name="membership_type"
-                   id="tier-Ordinary" value="Ordinary"
-                   data-required="true" data-group="membership_type"
-                   data-err-required="Please select a membership type." />
-            <label class="soa-tier-card" for="tier-Ordinary">
-              <div class="soa-tier-name">Ordinary</div>
-              <div class="soa-tier-price" id="price-Ordinary">SGD —</div>
-              <div class="soa-tier-desc">Full voting member. For qualified optometrists in active practice.</div>
-            </label>
-          </div>
-
-          <div>
-            <input class="soa-tier-input" type="radio" name="membership_type"
-                   id="tier-Associate" value="Associate" />
-            <label class="soa-tier-card" for="tier-Associate">
-              <div class="soa-tier-name">Associate</div>
-              <div class="soa-tier-price" id="price-Associate">SGD —</div>
-              <div class="soa-tier-desc">For optometry students and those not yet fully qualified.</div>
-            </label>
-          </div>
-
-          <div>
-            <input class="soa-tier-input" type="radio" name="membership_type"
-                   id="tier-CPE_Affiliate" value="CPE_Affiliate" />
-            <label class="soa-tier-card" for="tier-CPE_Affiliate">
-              <div class="soa-tier-name">CPE Affiliate</div>
-              <div class="soa-tier-price" id="price-CPE_Affiliate">SGD —</div>
-              <div class="soa-tier-desc">For continuing professional education participants.</div>
-            </label>
-          </div>
-
-          <div>
-            <input class="soa-tier-input" type="radio" name="membership_type"
-                   id="tier-Life" value="Life" />
-            <label class="soa-tier-card" for="tier-Life">
-              <div class="soa-tier-name">Life</div>
-              <div class="soa-tier-price" id="price-Life">SGD —</div>
-              <div class="soa-tier-desc">One-time lifetime membership.</div>
-            </label>
-          </div>
-
-        </div>
+        <div class="soa-tier-grid" id="soa-tier-grid" style="margin-top:10px"></div>
         <span class="soa-err" id="err-membership_type"></span>
       </div>
 
@@ -770,7 +726,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.3.2</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.3.3</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -795,10 +751,10 @@ const SOA_CONFIG = {
 
 // TODO: fill in actual SGD fees for each tier
 const MEMBERSHIP_FEES = {
-  Ordinary:      { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
-  Associate:     { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
-  CPE_Affiliate: { entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee' },
-  Life:          { entrance: 100.00, annual: 0.00, label: 'Life Membership Fee (one-time)' },
+  Ordinary:      { name: 'Ordinary',      entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'Full voting member. For qualified optometrists in active practice.' },
+  Associate:     { name: 'Associate',     entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For optometry students and those not yet fully qualified.' },
+  CPE_Affiliate: { name: 'CPE Affiliate', entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For continuing professional education participants.' },
+  Life:          { name: 'Life',          entrance: 100.00, annual: 0.00, label: 'Life Membership Fee (one-time)', desc: 'One-time lifetime membership.' },
 };
 
 /* ─────────────────────────────────────────────────────────────
@@ -1049,6 +1005,27 @@ function initConditionals() {
       $('cond-paynow').classList.toggle('show',  r.value === 'PayNow'       && r.checked);
     });
   });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Membership tier cards — rendered from MEMBERSHIP_FEES so
+   adding a new tier only requires adding an entry above.
+   ───────────────────────────────────────────────────────────── */
+function renderTierCards() {
+  const grid = $('soa-tier-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(MEMBERSHIP_FEES).map(([key, cfg], i) => `
+    <div>
+      <input class="soa-tier-input" type="radio" name="membership_type"
+             id="tier-${key}" value="${key}"
+             ${i === 0 ? 'data-required="true" data-group="membership_type" data-err-required="Please select a membership type."' : ''} />
+      <label class="soa-tier-card" for="tier-${key}">
+        <div class="soa-tier-name">${cfg.name}</div>
+        <div class="soa-tier-price" id="price-${key}">SGD —</div>
+        <div class="soa-tier-desc">${cfg.desc}</div>
+      </label>
+    </div>
+  `).join('');
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1776,6 +1753,7 @@ async function boot() {
   populateCountrySelects();
   initDateMasks();
   initConditionals();
+  renderTierCards();
   initFeeDisplay();
   syncDerivedNames();
   initFileZones();

@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.3.2**
+**Version 1.3.3**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -147,6 +147,12 @@ Choose one ✴:
 | **Associate** | Optometry students or those not yet fully qualified. |
 | **CPE Affiliate** | Continuing Professional Education participants. |
 | **Life** | One-time lifetime membership. |
+
+Tier cards are **dynamically rendered** from the `MEMBERSHIP_FEES` object in `soa-signup-form.html`. To add or remove a membership type, only `MEMBERSHIP_FEES` needs to be updated — no HTML changes required. Each entry takes the shape:
+
+```js
+Key: { name: 'Display Name', entrance: 100.00, annual: 0.00, label: 'Fee label', desc: 'Card description.' }
+```
 
 ---
 
