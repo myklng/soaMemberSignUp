@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.3.3**
+**Version 1.3.4**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -151,8 +151,19 @@ Choose one ✴:
 Tier cards are **dynamically rendered** from the `MEMBERSHIP_FEES` object in `soa-signup-form.html`. To add or remove a membership type, only `MEMBERSHIP_FEES` needs to be updated — no HTML changes required. Each entry takes the shape:
 
 ```js
-Key: { name: 'Display Name', entrance: 100.00, annual: 0.00, label: 'Fee label', desc: 'Card description.' }
+Key: {
+  name:      'Display Name',
+  entrance:  100.00,
+  annual:    0.00,
+  label:     'Fee label',
+  desc:      'Card description.',
+  // Optional — YYYY-MM-DD, evaluated in the user's local timezone
+  startDate: '2026-05-01',   // hide card before this date
+  endDate:   '2026-05-31',   // hide card after this date (inclusive, end of day)
+}
 ```
+
+If `startDate` or `endDate` are set, the card is hidden outside that window and displays an amber date badge (e.g. "Ends 31 May 2026") while active. Both fields are optional and independent. Dates are compared against the **user's local time**, not the server's.
 
 ---
 
