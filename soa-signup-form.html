@@ -750,6 +750,24 @@ const SOA_CONFIG = {
 };
 
 // TODO: fill in actual SGD fees for each tier
+// ─── HOW TO ADD A TIER ────────────────────────────────────────────────────────
+// Each key becomes the stored value (no spaces; use underscores for multi-word).
+// Fields:
+//   name      — display label shown on the card
+//   entrance  — one-time entrance fee in SGD (charged for every tier)
+//   annual    — recurring annual fee in SGD (0 for Life / one-time tiers)
+//   label     — fee-row label in the payment summary (e.g. 'Annual Membership Fee')
+//   desc      — short description shown on the card
+//
+// Optional promotion window (both fields are independent — use one or both):
+//   startDate — 'YYYY-MM-DD'  card is hidden before this date (local time)
+//   endDate   — 'YYYY-MM-DD'  card is hidden after this date, end of day (local time)
+//
+// Example limited-time tier:
+//   Promo: { name: 'Promo', entrance: 50.00, annual: 0.00,
+//            label: 'Promotional Fee', desc: 'Special May 2026 rate.',
+//            startDate: '2026-05-01', endDate: '2026-05-31' },
+// ─────────────────────────────────────────────────────────────────────────────
 const MEMBERSHIP_FEES = {
   Ordinary:      { name: 'Ordinary',      entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'Full voting member. For qualified optometrists in active practice.' },
   Associate:     { name: 'Associate',     entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For optometry students and those not yet fully qualified.' },
