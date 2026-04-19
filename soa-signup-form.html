@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.3.4
+  Version : 1.4.0
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -23,13 +23,14 @@
   <nav class="soa-sec-nav" id="soaSecNav" aria-label="Jump to section">
     <a href="#s-personal">1 · Personal</a>
     <a href="#s-address">2 · Address</a>
-    <a href="#s-quals">3 · Qualifications</a>
-    <a href="#s-membership">4 · Membership</a>
+    <a href="#s-renewal-type" data-nav-mode="renewal">Renewal Type</a>
+    <a href="#s-quals" data-nav-mode="new">3 · Qualifications</a>
+    <a href="#s-membership" data-nav-mode="new">4 · Membership</a>
     <a href="#s-payment">5 · Payment</a>
     <a href="#s-photo">6 · Profile Pic</a>
-    <a href="#s-sponsors">7 · Sponsors</a>
+    <a href="#s-sponsors" data-nav-mode="new">7 · Sponsors</a>
     <a href="#s-declaration">8 · Declaration</a>
-    <a href="#s-agreement">9 · Agreement</a>
+    <a href="#s-agreement" data-nav-mode="new">9 · Agreement</a>
   </nav>
 
   <!-- Global error banner -->
@@ -247,6 +248,55 @@
 
 
     <!-- ══════════════════════════════════════════
+         FORM TYPE (new application vs renewal)
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-form-type">
+      <h3 class="soa-section-hd">What would you like to do?</h3>
+
+      <div class="soa-fg" id="fg-form_mode">
+        <div class="soa-tier-grid" id="soa-form-type-grid" style="margin-top:10px">
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="form_mode"
+                   id="fm-new" value="new" checked
+                   data-required="true" data-group="form_mode"
+                   data-err-required="Please select an application type." />
+            <label class="soa-tier-card" for="fm-new">
+              <div class="soa-tier-name">New Application</div>
+              <div class="soa-tier-desc">Apply to join the Singapore Optometric Association as a new member.</div>
+            </label>
+          </div>
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="form_mode"
+                   id="fm-renewal" value="renewal" />
+            <label class="soa-tier-card" for="fm-renewal">
+              <div class="soa-tier-name">Renewal / Update of Particulars</div>
+              <div class="soa-tier-desc">Renew your membership or update your personal details as an existing SOA member.</div>
+            </label>
+          </div>
+
+        </div>
+        <span class="soa-err" id="err-form_mode"></span>
+      </div>
+    </div><!-- /#s-form-type -->
+
+
+    <!-- ══════════════════════════════════════════
+         RENEWAL TYPE (renewal mode only)
+         ══════════════════════════════════════════ -->
+    <div class="soa-section" id="s-renewal-type">
+      <h3 class="soa-section-hd">Renewal Type</h3>
+
+      <div class="soa-fg" id="fg-renewal_type">
+        <label class="soa-label">Select your renewal category <span class="soa-req">*</span></label>
+        <div class="soa-tier-grid" id="soa-renewal-grid" style="margin-top:10px"></div>
+        <span class="soa-err" id="err-renewal_type"></span>
+      </div>
+    </div><!-- /#s-renewal-type -->
+
+
+    <!-- ══════════════════════════════════════════
          §3 QUALIFICATIONS & BACKGROUND
          ══════════════════════════════════════════ -->
     <div class="soa-section" id="s-quals">
@@ -372,7 +422,7 @@
 
       <!-- Fee summary (driven by JS) -->
       <div class="soa-fee-box" id="soaFeeBox">
-        <div class="soa-fee-row">
+        <div class="soa-fee-row soa-fee-entrance-row">
           <span>Entrance Fee</span>
           <span id="fee-entrance">SGD —</span>
         </div>
@@ -695,6 +745,7 @@
       <button type="submit" class="soa-btn-submit" id="soaSubmitBtn">
         Submit Application →
       </button>
+      <!-- label updated by JS when form mode changes -->
     </div>
 
   </form><!-- /#soaForm -->
@@ -711,11 +762,10 @@
   <!-- Success screen -->
   <div class="soa-success-screen" id="soaSuccess">
     <div class="soa-success-icon">✓</div>
-    <h2 style="font-size:22px;font-weight:700;color:var(--soa-primary);margin-bottom:6px">
-      Application Submitted
-    </h2>
+    <h2 style="font-size:22px;font-weight:700;color:var(--soa-primary);margin-bottom:6px"
+        id="soaSuccessTitle">Application Submitted</h2>
     <div class="soa-success-id" id="soaSuccessId"></div>
-    <p class="soa-success-body">
+    <p class="soa-success-body" id="soaSuccessBody">
       Thank you for applying to join the Singapore Optometric Association.
       Your application has been received and will be reviewed by the Membership Committee.
       Please retain your Application ID above for reference.
@@ -726,7 +776,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.3.4</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.4.0</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -773,6 +823,23 @@ const MEMBERSHIP_FEES = {
   Associate:     { name: 'Associate',     entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For optometry students and those not yet fully qualified.' },
   CPE_Affiliate: { name: 'CPE Affiliate', entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For continuing professional education participants.' },
   Life:          { name: 'Life',          entrance: 100.00, annual: 0.00, label: 'Life Membership Fee (one-time)', desc: 'One-time lifetime membership.' },
+};
+
+// ─── RENEWAL_FEES — populate for the Renewal / Update of Particulars flow ────
+// Each key must match the corresponding MEMBERSHIP_FEES key (used for routing).
+// Fields:
+//   name  — display label on the renewal type card
+//   fee   — annual renewal fee in SGD (no entrance fee for renewals)
+//   label — fee-row label in the payment summary
+//   desc  — short description on the card
+//
+// startDate / endDate work the same as MEMBERSHIP_FEES (YYYY-MM-DD, local time).
+// ─────────────────────────────────────────────────────────────────────────────
+const RENEWAL_FEES = {
+  Ordinary:      { name: 'Ordinary',      fee: 0.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for ordinary members.' },
+  Associate:     { name: 'Associate',     fee: 0.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for associate members.' },
+  CPE_Affiliate: { name: 'CPE Affiliate', fee: 0.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for CPE affiliate members.' },
+  Life:          { name: 'Life',          fee: 0.00, label: 'Life Renewal Fee',   desc: 'Renewal for life members.' },
 };
 
 /* ─────────────────────────────────────────────────────────────
@@ -873,6 +940,10 @@ function clearError(fieldId) {
   if (err) err.textContent = '';
 }
 
+function currentFormMode() {
+  const el = document.querySelector('input[name="form_mode"]:checked');
+  return el ? el.value : 'new';
+}
 function isPracticingNow() {
   const el = document.querySelector('input[name="is_practicing"]:checked');
   return el && el.value === 'yes';
@@ -881,9 +952,14 @@ function currentPaymentMethod() {
   const el = document.querySelector('input[name="payment_method"]:checked');
   return el ? el.value : '';
 }
+function isSectionVisible(el) {
+  const section = el.closest('.soa-section');
+  return !section || getComputedStyle(section).display !== 'none';
+}
 
 function validateField(el) {
   if (!el) return true;
+  if (!isSectionVisible(el)) { clearError(el.id || el.name); return true; }
   const id = el.id || el.name;
 
   // Conditional required
@@ -985,8 +1061,10 @@ function validateAllFields() {
     if (!validateField(el)) ok = false;
   });
 
-  // Signature pads
+  // Signature pads (skip pads inside hidden-mode sections)
   Object.keys(signaturePads).forEach(cid => {
+    const canvas = $(cid);
+    if (canvas && !isSectionVisible(canvas)) return;
     if (!validateSignature(cid)) ok = false;
   });
 
@@ -1077,6 +1155,121 @@ function renderTierCards() {
       </label>
     </div>
   `).join('');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Renewal tier cards — same render logic as membership tiers
+   but sourced from RENEWAL_FEES.
+   ───────────────────────────────────────────────────────────── */
+function renderRenewalCards() {
+  const grid = $('soa-renewal-grid');
+  if (!grid) return;
+
+  function parseLocal(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function isAvailable(cfg) {
+    if (!cfg.startDate && !cfg.endDate) return true;
+    const now = new Date();
+    if (cfg.startDate && now < parseLocal(cfg.startDate)) return false;
+    if (cfg.endDate) {
+      const end = parseLocal(cfg.endDate);
+      end.setHours(23, 59, 59, 999);
+      if (now > end) return false;
+    }
+    return true;
+  }
+  function badgeHtml(cfg) {
+    if (!cfg.startDate && !cfg.endDate) return '';
+    const fmt = str => parseLocal(str).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    let text;
+    if (cfg.startDate && cfg.endDate) text = `${fmt(cfg.startDate)} – ${fmt(cfg.endDate)}`;
+    else if (cfg.endDate)             text = `Ends ${fmt(cfg.endDate)}`;
+    else                              text = `From ${fmt(cfg.startDate)}`;
+    return `<div class="soa-tier-badge">${text}</div>`;
+  }
+
+  const available = Object.entries(RENEWAL_FEES).filter(([, cfg]) => isAvailable(cfg));
+  grid.innerHTML = available.map(([key, cfg], i) => `
+    <div>
+      <input class="soa-tier-input" type="radio" name="renewal_type"
+             id="rt-${key}" value="${key}"
+             ${i === 0 ? 'data-required="true" data-group="renewal_type" data-err-required="Please select a renewal type."' : ''} />
+      <label class="soa-tier-card" for="rt-${key}">
+        ${badgeHtml(cfg)}
+        <div class="soa-tier-name">${cfg.name}</div>
+        <div class="soa-tier-price" id="rprice-${key}">SGD —</div>
+        <div class="soa-tier-desc">${cfg.desc}</div>
+      </label>
+    </div>
+  `).join('');
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Form-type toggle — drives data-form-mode on #soaWrapper
+   and updates fee display, submit label, nav visibility.
+   ───────────────────────────────────────────────────────────── */
+function initFormTypeToggle() {
+  const wrapper   = $('soaWrapper');
+  const submitBtn = $('soaSubmitBtn');
+
+  function applyMode(mode) {
+    wrapper.dataset.formMode = mode;
+    submitBtn.textContent = mode === 'renewal' ? 'Submit Renewal →' : 'Submit Application →';
+
+    // Clear stale error states from sections now hidden by this mode change
+    $$('.soa-section').forEach(section => {
+      if (getComputedStyle(section).display === 'none') {
+        section.querySelectorAll('.soa-fg.has-error').forEach(fg => fg.classList.remove('has-error'));
+        section.querySelectorAll('.soa-err').forEach(err => { err.textContent = ''; });
+      }
+    });
+
+    // Update fee box labels and hint for current mode
+    if (mode === 'renewal') {
+      $('fee-membership-lbl').textContent = 'Renewal Fee';
+      $('fee-hint').textContent = 'Select a renewal type above to see the applicable fee.';
+      $('fee-entrance').textContent = 'SGD —';
+      $('fee-membership').textContent = 'SGD —';
+      $('fee-total').textContent = 'SGD —';
+    } else {
+      $('fee-membership-lbl').textContent = 'Membership Fee';
+      $('fee-hint').textContent = 'Select a membership type above to see the applicable fees.';
+      $('fee-entrance').textContent = 'SGD —';
+      $('fee-membership').textContent = 'SGD —';
+      $('fee-total').textContent = 'SGD —';
+    }
+  }
+
+  // Default mode
+  applyMode('new');
+
+  $$('input[name="form_mode"]').forEach(r => {
+    r.addEventListener('change', () => { if (r.checked) applyMode(r.value); });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Renewal fee display — mirrors initFeeDisplay() for renewal
+   ───────────────────────────────────────────────────────────── */
+function initRenewalFeeDisplay() {
+  Object.entries(RENEWAL_FEES).forEach(([tier, fees]) => {
+    const el = $('rprice-' + tier);
+    if (el) el.textContent = 'SGD ' + fees.fee.toFixed(2);
+  });
+
+  $$('input[name="renewal_type"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const fees = RENEWAL_FEES[r.value];
+      if (!fees) return;
+      $('fee-entrance').textContent      = 'SGD —';   // no entrance fee for renewals
+      $('fee-membership').textContent    = fmt(fees.fee);
+      $('fee-membership-lbl').textContent = fees.label;
+      $('fee-total').textContent         = fmt(fees.fee);
+      $('fee-hint').textContent          = '';
+    });
+  });
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1498,35 +1691,66 @@ function collectOrgs() {
 }
 
 function collectPayload(signUpID) {
-  const val = id => ($$(id)[0] ? $$('#soaForm #' + id)[0]?.value || '' : '');
-  const fval = n => ($('#soaForm #' + n) ? $('#' + n).value.trim() : '');
+  const formMode = currentFormMode();
 
+  const personal = {
+    fullname_en: $('fullname_en').value.trim(),
+    fullname_zh: $('fullname_zh').value.trim(),
+    dob:         $('dob').value.trim(),
+    nric:        $('nric').value.trim().toUpperCase(),
+    citizenship: $('citizenship').value.trim(),
+    email:       $('email').value.trim(),
+    oob:         $('oob').value.trim().toUpperCase(),
+  };
+
+  const addresses = {
+    isPracticing: isPracticingNow(),
+    practice: isPracticingNow() ? {
+      name:    $('practice_name').value.trim(),
+      address: $('practice_address').value.trim(),
+      country: $('practice_country').value,
+      tel:     $('practice_tel').value.trim(),
+    } : null,
+    residence: {
+      address:    $('res_address').value.trim(),
+      country:    $('res_country').value,
+      tel_home:   $('tel_home').value.trim(),
+      tel_mobile: $('tel_mobile').value.trim(),
+    },
+  };
+
+  const method = currentPaymentMethod();
+  const paymentRef = {
+    method,
+    cheque_number: method === 'Cheque'       ? $('cheque_no').value.trim()  : '',
+    bank_ref:      method === 'BankTransfer'  ? $('bank_ref').value.trim()   : '',
+    paynow_ref:    method === 'PayNow'        ? $('paynow_ref').value.trim() : '',
+  };
+
+  if (formMode === 'renewal') {
+    const renewalType = (document.querySelector('input[name="renewal_type"]:checked') || {}).value || '';
+    const fees        = RENEWAL_FEES[renewalType] || { fee: 0 };
+    return {
+      formMode: 'renewal',
+      signUpID,
+      personal,
+      addresses,
+      renewal: { type: renewalType },
+      payment: { renewal_fee: fees.fee, total: fees.fee, ...paymentRef },
+      declaration: { name: $('decl_name').value.trim(), agreed: $('decl_agree').checked },
+      files: collectFiles(),
+      submittedAt: new Date().toISOString(),
+    };
+  }
+
+  // New application
+  const type = (document.querySelector('input[name="membership_type"]:checked') || {}).value || '';
+  const fees = MEMBERSHIP_FEES[type] || { entrance: 0, annual: 0 };
   return {
+    formMode: 'new',
     signUpID,
-    personal: {
-      fullname_en: $('fullname_en').value.trim(),
-      fullname_zh: $('fullname_zh').value.trim(),
-      dob:         $('dob').value.trim(),
-      nric:        $('nric').value.trim().toUpperCase(),
-      citizenship: $('citizenship').value.trim(),
-      email:       $('email').value.trim(),
-      oob:         $('oob').value.trim().toUpperCase(),
-    },
-    addresses: {
-      isPracticing: isPracticingNow(),
-      practice: isPracticingNow() ? {
-        name:    $('practice_name').value.trim(),
-        address: $('practice_address').value.trim(),
-        country: $('practice_country').value,
-        tel:     $('practice_tel').value.trim(),
-      } : null,
-      residence: {
-        address:    $('res_address').value.trim(),
-        country:    $('res_country').value,
-        tel_home:   $('tel_home').value.trim(),
-        tel_mobile: $('tel_mobile').value.trim(),
-      },
-    },
+    personal,
+    addresses,
     qualifications: {
       description:          $('qual_desc').value.trim(),
       date_of_issue:        $('qual_date').value.trim(),
@@ -1538,53 +1762,37 @@ function collectPayload(signUpID) {
       relevant_experience: $('experience').value.trim(),
     },
     onlineQuestionnaire: $('online_questionnaire').checked,
-    membership: {
-      type: (document.querySelector('input[name="membership_type"]:checked') || {}).value || '',
+    membership: { type },
+    payment: {
+      entrance_fee:   fees.entrance,
+      membership_fee: fees.annual,
+      total:          fees.entrance + fees.annual,
+      ...paymentRef,
     },
-    payment: (() => {
-      const type   = (document.querySelector('input[name="membership_type"]:checked') || {}).value || '';
-      const fees   = MEMBERSHIP_FEES[type] || { entrance: 0, annual: 0 };
-      const method = currentPaymentMethod();
-      return {
-        entrance_fee:    fees.entrance,
-        membership_fee:  fees.annual,
-        total:           fees.entrance + fees.annual,
-        method,
-        cheque_number:   method === 'Cheque'       ? $('cheque_no').value.trim()  : '',
-        bank_ref:        method === 'BankTransfer'  ? $('bank_ref').value.trim()   : '',
-        paynow_ref:      method === 'PayNow'        ? $('paynow_ref').value.trim() : '',
-      };
-    })(),
     sponsors: {
-      proposer: {
-        name:          $('proposer_name').value.trim(),
-        is_soa_member: $('proposer_is_soa').value === 'true',
-      },
-      seconder: {
-        name:          $('seconder_name').value.trim(),
-        is_soa_member: $('seconder_is_soa').value === 'true',
-      },
+      proposer: { name: $('proposer_name').value.trim(), is_soa_member: $('proposer_is_soa').value === 'true' },
+      seconder: { name: $('seconder_name').value.trim(), is_soa_member: $('seconder_is_soa').value === 'true' },
     },
-    declaration: {
-      name:   $('decl_name').value.trim(),
-      agreed: $('decl_agree').checked,
-    },
-    agreement: {
-      name: $('agreement_name').value.trim(),
-    },
+    declaration: { name: $('decl_name').value.trim(), agreed: $('decl_agree').checked },
+    agreement:   { name: $('agreement_name').value.trim() },
     files: collectFiles(),
     submittedAt: new Date().toISOString(),
   };
 }
 
 function collectFiles() {
-  const files = { ...fileDataStore };   // file uploads (converted to PNG data URLs)
+  // Only include uploads whose file input is in a currently visible section
+  const files = {};
+  Object.entries(fileDataStore).forEach(([fieldName, dataUrl]) => {
+    const input = document.getElementById(fieldName);
+    if (!input || isSectionVisible(input)) files[fieldName] = dataUrl;
+  });
 
-  // Signature pads → PNG data URLs
+  // Signature pads → PNG data URLs (skip pads in hidden-mode sections)
   Object.entries(signaturePads).forEach(([cid, pad]) => {
+    const canvas = $(cid);
+    if (canvas && !isSectionVisible(canvas)) return;
     if (!pad.isEmpty()) {
-      const fieldName = cid.replace(/^sp-/, '') + '_signature'
-                           .replace('_sig_signature', '_signature');
       // normalise: sp-proposer_sig → proposer_signature, sp-agreement_sig → agreement_signature
       const clean = cid.replace(/^sp-/, '').replace(/_sig$/, '');
       files[clean + '_signature'] = pad.toDataURL('image/png');
@@ -1637,7 +1845,13 @@ $('soaForm').addEventListener('submit', async e => {
     $('soaOverlay').classList.remove('show');
     $('soaForm').classList.add('soa-hidden');
     $('soaSecNav').classList.add('soa-hidden');
-    $('soaSuccessId').textContent = 'Application ID: ' + confirmedID;
+    $('soaSuccessId').textContent = (currentFormMode() === 'renewal' ? 'Renewal ID: ' : 'Application ID: ') + confirmedID;
+    if (currentFormMode() === 'renewal') {
+      $('soaSuccessTitle').textContent = 'Renewal Submitted';
+      $('soaSuccessBody').textContent  =
+        'Thank you. Your renewal has been received and will be processed by the SOA Membership Committee. ' +
+        'Please retain your Renewal ID above for reference. You will be contacted via email once processed.';
+    }
     $('soaSuccess').classList.add('show');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -1805,7 +2019,10 @@ async function boot() {
   initDateMasks();
   initConditionals();
   renderTierCards();
+  renderRenewalCards();
+  initFormTypeToggle();
   initFeeDisplay();
+  initRenewalFeeDisplay();
   syncDerivedNames();
   initFileZones();
   attachLiveValidation();

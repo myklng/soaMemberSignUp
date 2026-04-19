@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.3.4**
+**Version 1.4.0**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -65,9 +65,22 @@ soaMemberSignUp/
 
 ---
 
+## Form Mode
+
+At the start of the form (between §2 Address and §3 Qualifications), the user selects their intent:
+
+| Mode | Description | Visible sections | Sheet tab |
+|---|---|---|---|
+| **New Application** | Default — full membership application | All 9 sections | `Applications` (SHEET_A) |
+| **Renewal / Update** | Existing member renewing or updating details | Personal, Address, Renewal Type, Payment, Profile Pic, Declaration | `Renewal` (SHEET_C) |
+
+In renewal mode, the form hides Qualifications, Membership Type, Sponsors, and Agreement. A **Renewal Type** section (cards from `RENEWAL_FEES`) appears instead of Membership Type. The payment fee box adapts: no Entrance Fee row, "Renewal Fee" replaces "Membership Fee".
+
+---
+
 ## Form Sections & Field Requirements
 
-The form is divided into **9 sections**. Fields marked ✴ are required.
+The form is divided into **9 sections** (new application mode). Fields marked ✴ are required.
 
 ---
 
@@ -279,8 +292,9 @@ All Drive files are set to **view-only / anyone with link** so the Sheet URL col
    ```js
    const CONFIG = {
      SHEET_ID:        'your-google-sheet-id',
-     SHEET_A:         'Applications',   // tab name for submissions
-     SHEET_B:         'MemberList',     // tab name with member names in column A (no header row)
+     SHEET_A:         'Applications',   // tab for new membership submissions
+     SHEET_B:         'MemberList',     // tab with member names in column A (no header row)
+     SHEET_C:         'Renewal',        // tab for renewal / update submissions
      DRIVE_FOLDER_ID: 'your-drive-folder-id',
    };
    ```

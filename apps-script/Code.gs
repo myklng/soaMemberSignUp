@@ -22,8 +22,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 const CONFIG = {
   SHEET_ID:        'YOUR_GOOGLE_SHEET_ID',         // TODO
-  SHEET_A:         'Applications',                  // TODO: match your tab name
-  SHEET_B:         'MemberList',                      // TODO: match your tab name
+  SHEET_A:         'Applications',                  // TODO: new membership submissions
+  SHEET_B:         'MemberList',                    // TODO: sponsor / member list (column A, no header)
+  SHEET_C:         'Renewal',                       // TODO: renewal & update submissions
   DRIVE_FOLDER_ID: 'YOUR_GOOGLE_DRIVE_FOLDER_ID',  // TODO
 };
 
@@ -57,6 +58,24 @@ const SHEET_HEADERS = [
   'File_AgreementSignature',
 ];
 
+// Sheet C column order for renewal / update submissions
+const RENEWAL_HEADERS = [
+  'RenewalID', 'SubmittedAt',
+  // Personal
+  'FullName_EN', 'FullName_ZH', 'DateOfBirth', 'NRIC', 'Citizenship', 'Email', 'OOB_Number',
+  // Address
+  'IsPracticing',
+  'PracticeName', 'PracticeAddress', 'PracticeCountry', 'PracticeTel',
+  'ResidenceAddress', 'ResidenceCountry', 'Tel_Home', 'Tel_Mobile',
+  // Renewal
+  'RenewalType',
+  'RenewalFee_SGD', 'TotalFee_SGD',
+  'PaymentMethod', 'ChequeNumber', 'BankTransferRef', 'PayNowRef',
+  // File URLs (Drive)
+  'File_PassportPhoto',
+  'File_PaymentProof',
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET handler
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,8 +105,12 @@ function doPost(e) {
     const fullname_en = (data.personal || {}).fullname_en || '';
     const fileUrls = saveFilesToDrive_(data.files || {}, signUpID, fullname_en);
 
-    // 2. Append row to Sheet A
-    appendToSheet_(data, fileUrls, signUpID);
+    // 2. Route to the correct sheet based on form mode
+    if (data.formMode === 'renewal') {
+      appendRenewalToSheet_(data, fileUrls, signUpID);
+    } else {
+      appendToSheet_(data, fileUrls, signUpID);
+    }
 
     return jsonResponse({ success: true, signUpID });
 
@@ -307,6 +330,58 @@ function appendToSheet_(data, fileUrls, signUpID) {
 
   // Auto-resize columns for readability (optional — can be slow on large sheets)
   // sheet.autoResizeColumns(1, SHEET_HEADERS.length);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Append row to Sheet C (Renewal tab)
+// ─────────────────────────────────────────────────────────────────────────────
+function appendRenewalToSheet_(data, fileUrls, signUpID) {
+  const ss    = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+  let   sheet = ss.getSheetByName(CONFIG.SHEET_C);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.SHEET_C);
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(RENEWAL_HEADERS);
+    const hdr = sheet.getRange(1, 1, 1, RENEWAL_HEADERS.length);
+    hdr.setBackground('#0d7377')
+       .setFontColor('#ffffff')
+       .setFontWeight('bold')
+       .setFontSize(11);
+    sheet.setFrozenRows(1);
+  }
+
+  const p    = data.personal  || {};
+  const addr = data.addresses || {};
+  const prac = addr.practice  || {};
+  const res  = addr.residence || {};
+  const ren  = data.renewal   || {};
+  const pay  = data.payment   || {};
+
+  sheet.appendRow([
+    signUpID,
+    data.submittedAt || new Date().toISOString(),
+    // Personal
+    p.fullname_en || '', p.fullname_zh || '', p.dob || '', p.nric || '',
+    p.citizenship || '', p.email || '', p.oob || '',
+    // Address
+    addr.isPracticing ? 'Yes' : 'No',
+    prac.name    || '', prac.address  || '', prac.country || '', prac.tel    || '',
+    res.address  || '', res.country   || '', res.tel_home || '', res.tel_mobile || '',
+    // Renewal
+    ren.type           || '',
+    pay.renewal_fee    != null ? pay.renewal_fee : '',
+    pay.total          != null ? pay.total       : '',
+    pay.method         || '',
+    pay.cheque_number  || '',
+    pay.bank_ref       || '',
+    pay.paynow_ref     || '',
+    // File URLs
+    fileUrls.passport_photo || '',
+    fileUrls.payment_proof  || '',
+  ]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
