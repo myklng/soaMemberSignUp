@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -38,6 +38,47 @@ function doGet() {
 
 function getVersion() {
   return VERSION;
+}
+
+/**
+ * Lists Drive files whose names contain `recordId`, and shows the expected
+ * search prefix. Used for debugging image-not-found issues.
+ * Returns { prefix, found: ['filename', ...], searched: ['baseName', ...] }
+ */
+function debugImages(recordId) {
+  const props    = PropertiesService.getScriptProperties();
+  const sheetId  = props.getProperty('SHEET_ID');
+  const tabName  = props.getProperty('SHEET_TAB') || 'Applications';
+  const folderId = props.getProperty('DRIVE_FOLDER_ID');
+
+  const ss      = SpreadsheetApp.openById(sheetId);
+  const sheet   = ss.getSheetByName(tabName);
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0].map(String);
+  let   record  = null;
+  for (let i = 1; i < data.length; i++) {
+    const row = {};
+    headers.forEach((h, j) => { row[h] = data[i][j]; });
+    if (String(row['SignUpID']) === String(recordId)) { record = row; break; }
+  }
+  if (!record) return { error: 'Record not found' };
+
+  const initials = getInitials_(String(record['FullName_EN'] || '')) || 'XX';
+  const pfx      = recordId + '_' + initials;
+
+  const folder = DriveApp.getFolderById(folderId);
+  const iter   = folder.getFiles();
+  const found  = [];
+  while (iter.hasNext()) {
+    const name = iter.next().getName();
+    if (name.indexOf(recordId) !== -1) found.push(name);
+  }
+
+  const suffixes = ['passport_photo', 'qualification_photocopy', 'payment_proof',
+                    'proposer_signature', 'seconder_signature', 'agreement_signature'];
+  const searched = suffixes.map(function (s) { return pfx + '_' + s + ' (.png/.jpg/.jpeg)'; });
+
+  return { prefix: pfx, searched: searched, found: found };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

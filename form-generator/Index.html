@@ -290,6 +290,7 @@
         </select>
       </div>
       <button class="btn btn-generate" id="generate-btn" disabled>Generate PDF</button>
+      <button class="btn btn-generate" id="debug-btn" disabled style="background:var(--muted);">Debug Images</button>
     </div>
 
     <div id="status-bar"></div>
@@ -353,6 +354,7 @@
   });
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
   document.getElementById('generate-btn').addEventListener('click', handleGenerate);
+  document.getElementById('debug-btn').addEventListener('click', handleDebug);
 
   // ── Login ─────────────────────────────────────────────────────────────────
   function handleLogin() {
@@ -407,6 +409,7 @@
     document.getElementById('record-select').innerHTML = '<option value="">Loading records...</option>';
     document.getElementById('record-select').disabled  = true;
     document.getElementById('generate-btn').disabled   = true;
+    document.getElementById('debug-btn').disabled      = true;
   }
 
   // ── Version ───────────────────────────────────────────────────────────────
@@ -438,6 +441,7 @@
         sel.innerHTML = html;
         sel.disabled  = false;
         document.getElementById('generate-btn').disabled = !data.length;
+        document.getElementById('debug-btn').disabled = !data.length;
         document.getElementById('record-count').textContent =
           data.length ? (data.length + ' record' + (data.length === 1 ? '' : 's')) : '';
         setStatus('');
@@ -446,6 +450,30 @@
         setStatus('Failed to load records: ' + ex.message, 'error');
       })
       .getRecords();
+  }
+
+  // ── Debug images ─────────────────────────────────────────────────────────
+  function handleDebug() {
+    var sel      = document.getElementById('record-select');
+    var recordId = sel.value;
+    if (!recordId) { setStatus('Please select a record first.', 'error'); return; }
+
+    setStatus('Checking Drive files...', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (result.error) { setStatus('Debug error: ' + result.error, 'error'); return; }
+        var msg = 'Prefix searched: ' + result.prefix + '\n\n'
+          + 'Files found in Drive for this record:\n'
+          + (result.found.length ? result.found.join('\n') : '(none found)')
+          + '\n\nExpected filenames:\n' + result.searched.join('\n');
+        setStatus('');
+        alert(msg);
+      })
+      .withFailureHandler(function (ex) {
+        setStatus('Debug failed: ' + ex.message, 'error');
+      })
+      .debugImages(recordId);
   }
 
   // ── Generate ──────────────────────────────────────────────────────────────
