@@ -195,16 +195,15 @@ Insert `{{FieldName}}` anywhere in the document body, headers, footers, or table
 
 ## Drive Folder — Image Naming Convention
 
-The generator reads files directly from the Drive folder that the membership signup form already writes to. **No renaming needed** — file names follow the same convention used during signup:
+Files must be named using the following convention:
 
 ```
-{SignUpID}_{Initials}_{suffix}.{ext}
+{ApplicationID}_{suffix}.{ext}
 ```
 
-- **SignUpID** — the application ID (e.g. `20261604-143022`)
-- **Initials** — first letter of each word in the applicant's English full name, uppercase (e.g. `John Smith Tan` → `JST`)
-- **suffix** — one of the values below
-- **ext** — `.png` or `.jpg` depending on what was originally uploaded (the generator tries `.png` first, then `.jpg`)
+- **ApplicationID** — the unique application ID (e.g. `20261604-143022`)
+- **suffix** — one of the values below (case-sensitive)
+- **ext** — `.png`, `.jpg`, or `.jpeg` (generator tries all three)
 
 | Suffix | Content | Dimension cap |
 |---|---|---|
@@ -215,14 +214,14 @@ The generator reads files directly from the Drive folder that the membership sig
 | `seconder_signature` | Seconder's drawn signature | 400 × 150 px |
 | `agreement_signature` | Applicant's agreement signature | 400 × 150 px |
 
-**Example** (applicant: John Smith Tan, SignUpID: `20261604-143022`):
+**Example** (ApplicationID: `20261604-143022`):
 ```
-20261604-143022_JST_passport_photo.png
-20261604-143022_JST_qualification_photocopy.png
-20261604-143022_JST_payment_proof.png
-20261604-143022_JST_proposer_signature.png
-20261604-143022_JST_seconder_signature.png
-20261604-143022_JST_agreement_signature.png
+20261604-143022_passport_photo.png
+20261604-143022_qualification_photocopy.png
+20261604-143022_payment_proof.png
+20261604-143022_proposer_signature.png
+20261604-143022_seconder_signature.png
+20261604-143022_agreement_signature.png
 ```
 
 Images are never upscaled — only downscaled if they exceed the dimension cap.

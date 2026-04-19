@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.1';
+const VERSION = 'v1.1.2';
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -63,9 +63,6 @@ function debugImages(recordId) {
   }
   if (!record) return { error: 'Record not found' };
 
-  const initials = getInitials_(String(record['FullName_EN'] || '')) || 'XX';
-  const pfx      = recordId + '_' + initials;
-
   const folder = DriveApp.getFolderById(folderId);
   const iter   = folder.getFiles();
   const found  = [];
@@ -76,9 +73,9 @@ function debugImages(recordId) {
 
   const suffixes = ['passport_photo', 'qualification_photocopy', 'payment_proof',
                     'proposer_signature', 'seconder_signature', 'agreement_signature'];
-  const searched = suffixes.map(function (s) { return pfx + '_' + s + ' (.png/.jpg/.jpeg)'; });
+  const searched = suffixes.map(function (s) { return recordId + '_' + s + ' (.png/.jpg/.jpeg)'; });
 
-  return { prefix: pfx, searched: searched, found: found };
+  return { prefix: recordId, searched: searched, found: found };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,21 +207,17 @@ function generatePDF(recordId, prevFileId) {
     const body = doc.getBody();
 
     // 3. Replace {{img_*}} slots first (must happen before text replacements) ─
-    const folder   = DriveApp.getFolderById(folderId);
-    const initials = getInitials_(String(record['FullName_EN'] || '')) || 'XX';
-    const pfx      = `${recordId}_${initials}`;
+    const folder = DriveApp.getFolderById(folderId);
 
-    // Image slots mirror the Drive file naming from the membership signup form:
-    //   {signUpID}_{initials}_{suffix}.{png|jpg}
-    // getFileBlob_() tries .png first, then .jpg/.jpeg — extension varies by upload.
-    Logger.log('Image search prefix: ' + pfx);
+    // File naming: {recordId}_{suffix}.{ext}
+    // getFileBlob_() tries .png, .jpg, .jpeg in order.
     const imageSlots = [
-      { placeholder: '{{img_passport_photo}}',  base: `${pfx}_passport_photo`,         maxW: 400, maxH: 500 },
-      { placeholder: '{{img_qual_photocopy}}',  base: `${pfx}_qualification_photocopy`, maxW: 800, maxH: 600 },
-      { placeholder: '{{img_payment_proof}}',   base: `${pfx}_payment_proof`,           maxW: 800, maxH: 600 },
-      { placeholder: '{{img_proposer_sig}}',    base: `${pfx}_proposer_signature`,      maxW: 400, maxH: 150 },
-      { placeholder: '{{img_seconder_sig}}',    base: `${pfx}_seconder_signature`,      maxW: 400, maxH: 150 },
-      { placeholder: '{{img_agreement_sig}}',   base: `${pfx}_agreement_signature`,     maxW: 400, maxH: 150 },
+      { placeholder: '{{img_passport_photo}}',  base: recordId + '_passport_photo',         maxW: 400, maxH: 500 },
+      { placeholder: '{{img_qual_photocopy}}',  base: recordId + '_qualification_photocopy', maxW: 800, maxH: 600 },
+      { placeholder: '{{img_payment_proof}}',   base: recordId + '_payment_proof',           maxW: 800, maxH: 600 },
+      { placeholder: '{{img_proposer_sig}}',    base: recordId + '_proposer_signature',      maxW: 400, maxH: 150 },
+      { placeholder: '{{img_seconder_sig}}',    base: recordId + '_seconder_signature',      maxW: 400, maxH: 150 },
+      { placeholder: '{{img_agreement_sig}}',   base: recordId + '_agreement_signature',     maxW: 400, maxH: 150 },
     ];
 
     imageSlots.forEach(slot => {
