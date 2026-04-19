@@ -77,6 +77,16 @@
   }
   .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,115,119,.12); }
 
+  .pw-wrap { position: relative; }
+  .pw-wrap input { padding-right: 40px; }
+  .pw-toggle {
+    position: absolute; right: 0; top: 0;
+    height: 100%; width: 38px;
+    border: none; background: none; cursor: pointer;
+    color: var(--muted); font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     padding: 10px 20px; border: none; border-radius: 6px;
@@ -92,8 +102,7 @@
     margin-top: 14px; display: none;
   }
   .alert.show { display: block; }
-  .alert-error   { background: var(--error-bg); color: var(--error); border: 1px solid #fca5a5; }
-  .alert-success { background: var(--primary-lt); color: var(--primary-dk); border: 1px solid #a7d4d5; }
+  .alert-error { background: var(--error-bg); color: var(--error); border: 1px solid #fca5a5; }
 
   /* ── Main app ─────────────────────────────────────────────────────────────── */
   #app-view { display: none; flex-direction: column; min-height: 100vh; }
@@ -242,18 +251,16 @@
     </div>
     <h2>Sign in</h2>
     <p>Enter your credentials to access the form generator.</p>
-    <form id="login-form" onsubmit="handleLogin(event)">
+    <form id="login-form">
       <div class="field">
         <label for="username">Username</label>
         <input type="text" id="username" name="username" autocomplete="username" required />
       </div>
       <div class="field">
         <label for="password">Password</label>
-        <div style="position:relative;">
-          <input type="password" id="password" name="password" autocomplete="current-password" required style="padding-right:40px;width:100%;" />
-          <button type="button" id="pw-toggle" onclick="togglePassword()"
-            style="position:absolute;right:0;top:0;height:100%;width:38px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:16px;display:flex;align-items:center;justify-content:center;"
-            title="Show / hide password">&#128065;</button>
+        <div class="pw-wrap">
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+          <button type="button" id="pw-toggle" class="pw-toggle" title="Show / hide password">&#128065;</button>
         </div>
       </div>
       <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
@@ -270,7 +277,7 @@
     <div class="app-header-title">Form Generator</div>
     <span class="version-badge" id="version-badge"></span>
     <span class="app-header-sub" id="record-count"></span>
-    <button class="btn-ghost" onclick="handleLogout()">Sign Out</button>
+    <button class="btn-ghost" id="logout-btn">Sign Out</button>
   </header>
 
   <main class="app-body">
@@ -279,12 +286,10 @@
       <div class="ctrl-group">
         <label for="record-select">Select record</label>
         <select id="record-select" disabled>
-          <option value="">Loading records…</option>
+          <option value="">Loading records...</option>
         </select>
       </div>
-      <button class="btn btn-generate" id="generate-btn" disabled onclick="handleGenerate()">
-        Generate PDF
-      </button>
+      <button class="btn btn-generate" id="generate-btn" disabled>Generate PDF</button>
     </div>
 
     <div id="status-bar"></div>
@@ -293,8 +298,8 @@
       <div class="preview-toolbar">
         <span class="preview-filename" id="preview-filename"></span>
         <div class="preview-actions">
-          <a id="open-link" class="btn-action btn-action-outline" target="_blank" rel="noopener">↗ Open in Drive</a>
-          <a id="download-link" class="btn-action btn-action-primary" target="_blank" rel="noopener">↓ Download PDF</a>
+          <a id="open-link" class="btn-action btn-action-outline" target="_blank" rel="noopener">Open in Drive</a>
+          <a id="download-link" class="btn-action btn-action-primary" target="_blank" rel="noopener">Download PDF</a>
         </div>
       </div>
       <iframe id="pdf-frame" title="PDF preview" allowfullscreen></iframe>
@@ -304,22 +309,38 @@
 </div>
 
 <script>
-  // ── State ────────────────────────────────────────────────────────────────
-  var authenticated  = false;
-  var records        = [];
-  var currentFileId  = null;
+  var authenticated = false;
+  var records       = [];
+  var currentFileId = null;
 
-  // ── Login ────────────────────────────────────────────────────────────────
-  function handleLogin(e) {
+  // ── Wire up events after DOM ready ────────────────────────────────────────
+  document.getElementById('login-form').addEventListener('submit', function (e) {
     e.preventDefault();
-    const btn  = document.getElementById('login-btn');
-    const err  = document.getElementById('login-error');
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value;
+    handleLogin();
+  });
+  document.getElementById('pw-toggle').addEventListener('click', function () {
+    var inp = document.getElementById('password');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      document.getElementById('pw-toggle').innerHTML = '&#128064;';
+    } else {
+      inp.type = 'password';
+      document.getElementById('pw-toggle').innerHTML = '&#128065;';
+    }
+  });
+  document.getElementById('logout-btn').addEventListener('click', handleLogout);
+  document.getElementById('generate-btn').addEventListener('click', handleGenerate);
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  function handleLogin() {
+    var btn  = document.getElementById('login-btn');
+    var err  = document.getElementById('login-error');
+    var user = document.getElementById('username').value.trim();
+    var pass = document.getElementById('password').value;
 
     err.classList.remove('show');
     btn.disabled    = true;
-    btn.textContent = 'Signing in…';
+    btn.textContent = 'Signing in...';
 
     google.script.run
       .withSuccessHandler(function (result) {
@@ -353,15 +374,17 @@
     setStatus('');
     document.getElementById('app-view').classList.remove('visible');
     document.getElementById('login-view').style.display = 'flex';
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
+    document.getElementById('username').value  = '';
+    document.getElementById('password').value  = '';
+    document.getElementById('pw-toggle').innerHTML = '&#128065;';
+    document.getElementById('password').type   = 'password';
     document.getElementById('login-error').classList.remove('show');
-    document.getElementById('record-select').innerHTML = '<option value="">Loading records…</option>';
+    document.getElementById('record-select').innerHTML = '<option value="">Loading records...</option>';
     document.getElementById('record-select').disabled  = true;
     document.getElementById('generate-btn').disabled   = true;
   }
 
-  // ── Version ──────────────────────────────────────────────────────────────
+  // ── Version ───────────────────────────────────────────────────────────────
   function loadVersion() {
     google.script.run
       .withSuccessHandler(function (v) {
@@ -370,22 +393,28 @@
       .getVersion();
   }
 
-  // ── Records ──────────────────────────────────────────────────────────────
+  // ── Records ───────────────────────────────────────────────────────────────
   function loadRecords() {
-    setStatus('Loading records…', 'loading');
+    setStatus('Loading records...', 'loading');
 
     google.script.run
       .withSuccessHandler(function (data) {
         records = data;
-        const sel = document.getElementById('record-select');
-        sel.innerHTML = data.length
-          ? '<option value="">— Select a record —</option>' +
-            data.map(r => `<option value="${escHtml(r.id)}">${escHtml(r.label)}</option>`).join('')
-          : '<option value="">No records found</option>';
-        sel.disabled = false;
+        var sel  = document.getElementById('record-select');
+        var html = '';
+        if (data.length) {
+          html = '<option value="">-- Select a record --</option>';
+          for (var i = 0; i < data.length; i++) {
+            html += '<option value="' + escHtml(data[i].id) + '">' + escHtml(data[i].label) + '</option>';
+          }
+        } else {
+          html = '<option value="">No records found</option>';
+        }
+        sel.innerHTML = html;
+        sel.disabled  = false;
         document.getElementById('generate-btn').disabled = !data.length;
         document.getElementById('record-count').textContent =
-          data.length ? data.length + ' record' + (data.length === 1 ? '' : 's') : '';
+          data.length ? (data.length + ' record' + (data.length === 1 ? '' : 's')) : '';
         setStatus('');
       })
       .withFailureHandler(function (ex) {
@@ -394,19 +423,19 @@
       .getRecords();
   }
 
-  // ── Generate ─────────────────────────────────────────────────────────────
+  // ── Generate ──────────────────────────────────────────────────────────────
   function handleGenerate() {
-    const sel      = document.getElementById('record-select');
-    const recordId = sel.value;
+    var sel      = document.getElementById('record-select');
+    var recordId = sel.value;
     if (!recordId) { setStatus('Please select a record first.', 'error'); return; }
 
     clearPreview();
-    setStatus('Generating PDF…', 'loading');
-    document.getElementById('generate-btn').disabled = true;
+    setStatus('Generating PDF...', 'loading');
+    document.getElementById('generate-btn').disabled  = true;
     document.getElementById('record-select').disabled = true;
 
-    const prevFileId = currentFileId;
-    currentFileId = null;
+    var prevFileId = currentFileId;
+    currentFileId  = null;
 
     google.script.run
       .withSuccessHandler(function (result) {
@@ -432,12 +461,9 @@
 
   // ── PDF preview ───────────────────────────────────────────────────────────
   function showPdf(fileId, filename) {
-    document.getElementById('pdf-frame').src =
-      'https://drive.google.com/file/d/' + fileId + '/preview';
-    document.getElementById('open-link').href =
-      'https://drive.google.com/file/d/' + fileId + '/view';
-    document.getElementById('download-link').href =
-      'https://drive.google.com/uc?export=download&id=' + fileId;
+    document.getElementById('pdf-frame').src          = 'https://drive.google.com/file/d/' + fileId + '/preview';
+    document.getElementById('open-link').href         = 'https://drive.google.com/file/d/' + fileId + '/view';
+    document.getElementById('download-link').href     = 'https://drive.google.com/uc?export=download&id=' + fileId;
     document.getElementById('preview-filename').textContent = filename;
     document.getElementById('preview-area').classList.add('visible');
   }
@@ -449,13 +475,11 @@
 
   // ── Status bar ────────────────────────────────────────────────────────────
   function setStatus(msg, type) {
-    const bar = document.getElementById('status-bar');
+    var bar = document.getElementById('status-bar');
     if (!msg) { bar.innerHTML = ''; return; }
-    const spinner = type === 'loading' ? '<div class="spinner"></div>' : '';
-    bar.innerHTML =
-      `<div class="status-msg ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}">
-         ${spinner}<span>${escHtml(msg)}</span>
-       </div>`;
+    var cls     = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+    var spinner = type === 'loading' ? '<div class="spinner"></div>' : '';
+    bar.innerHTML = '<div class="status-msg ' + cls + '">' + spinner + '<span>' + escHtml(msg) + '</span></div>';
   }
 
   // ── Util ──────────────────────────────────────────────────────────────────
@@ -463,19 +487,6 @@
     return String(str)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  // ── Password toggle ───────────────────────────────────────────────────────
-  function togglePassword() {
-    var inp = document.getElementById('password');
-    var btn = document.getElementById('pw-toggle');
-    if (inp.type === 'password') {
-      inp.type = 'text';
-      btn.innerHTML = '&#128064;'; // eyes open
-    } else {
-      inp.type = 'password';
-      btn.innerHTML = '&#128065;'; // eye
-    }
   }
 </script>
 </body>
