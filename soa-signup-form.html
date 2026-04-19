@@ -819,10 +819,20 @@ const SOA_CONFIG = {
 //            startDate: '2026-05-01', endDate: '2026-05-31' },
 // ─────────────────────────────────────────────────────────────────────────────
 const MEMBERSHIP_FEES = {
-  Ordinary:      { name: 'Ordinary',      entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'Full voting member. For qualified optometrists in active practice.' },
-  Associate:     { name: 'Associate',     entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For optometry students and those not yet fully qualified.' },
-  CPE_Affiliate: { name: 'CPE Affiliate', entrance: 100.00, annual: 0.00, label: 'Annual Membership Fee',          desc: 'For continuing professional education participants.' },
-  Life:          { name: 'Life',          entrance: 100.00, annual: 0.00, label: 'Life Membership Fee (one-time)', desc: 'One-time lifetime membership.' },
+  Ordinary:      { name: 'Ordinary', entrance: 100.00, annual: 120.00, label: 'Annual Membership Fee',
+                   desc: 'Full voting member. For qualified optometrists in active practice.'
+                 },
+  CCLP_Associate:     { name: 'CCLP Associate', entrance: 100.00, annual: 60.00, label: 'Annual Membership Fee', 
+                   desc: `Any person who is registered as an Optician with contact lens privileges (CCLP). The title given will be “CCLP Associate Member"`
+                 },
+  Student_Associate:     { name: 'Student Associate', entrance: 0.00, annual: 20.00, label: 'Annual Membership Fee', 
+                   desc: `Any person undertaking a course of training and education in optometry acceptable to and recognised by the Council of the Association`
+                 },
+  CPE_Affiliate: { name: 'CPE Affiliate', entrance: 100.00, annual: 90.00, label: 'Annual Membership Fee', 
+                   desc: 'For continuing professional education participants.'
+                 },
+  Life:          { name: 'Life', entrance: 100.00, annual: 1200.00, label: 'Life Membership Fee (one-time)',
+                   desc: 'One-time lifetime membership.' },
 };
 
 // ─── RENEWAL_FEES — populate for the Renewal / Update of Particulars flow ────
@@ -836,10 +846,11 @@ const MEMBERSHIP_FEES = {
 // startDate / endDate work the same as MEMBERSHIP_FEES (YYYY-MM-DD, local time).
 // ─────────────────────────────────────────────────────────────────────────────
 const RENEWAL_FEES = {
-  Ordinary:      { name: 'Ordinary',      fee: 0.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for ordinary members.' },
-  Associate:     { name: 'Associate',     fee: 0.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for associate members.' },
-  CPE_Affiliate: { name: 'CPE Affiliate', fee: 0.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for CPE affiliate members.' },
-  Life:          { name: 'Life',          fee: 0.00, label: 'Life Renewal Fee',   desc: 'Renewal for life members.' },
+  Ordinary: { name: 'Ordinary', fee: 120.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for ordinary members.' },
+  CCLP_Associate: { name: 'CCLP Associate', fee: 60.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for CCLP Associate members.' },
+  Student_Associate: { name: 'Student Associate', fee: 20.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for Student Associate members.' },
+  CPE_Affiliate: { name: 'CPE Affiliate', fee: 90.00, label: 'Annual Renewal Fee', desc: 'Annual renewal for CPE affiliate members.' },
+  //Life:          { name: 'Life',          fee: 0.00, label: 'Life Renewal Fee',   desc: 'Renewal for life members.' },
 };
 
 /* ─────────────────────────────────────────────────────────────
