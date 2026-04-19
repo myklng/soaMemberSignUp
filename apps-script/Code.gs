@@ -9,6 +9,7 @@
  *   CONFIG.SHEET_ID        — ID of your Google Spreadsheet
  *   CONFIG.SHEET_A         — Tab name for applications (will be created if absent)
  *   CONFIG.SHEET_B         — Tab name containing sponsor / member names (column A)
+ *   CONFIG.SHEET_C         — Tab name for renewals  (will be created if absent)
  *   CONFIG.DRIVE_FOLDER_ID — ID of the Drive folder for uploaded files
  *
  * Endpoints
