@@ -1,6 +1,6 @@
 # SOA Singapore — Membership Application Form
 
-**Version 1.4.0**
+**Version 1.4.1**
 
 A web-based membership application form for the **Singapore Optometric Association (SOA)**.
 Built in plain HTML, CSS, and JavaScript — no frameworks, no build step.
@@ -21,9 +21,7 @@ Person fills in the form on the website
 They upload a photo and sign their name on screen (using their mouse or finger)
         │
         ▼
-If they upload a PDF, the browser secretly converts it to a picture (PNG)
-        │
-        ▼
+
 They click "Submit Application"
         │
         ▼
@@ -130,7 +128,7 @@ Residence Address (always required):
 |---|---|---|
 | Qualification Held | ✴ | e.g. `Bachelor of Optometry` |
 | Date of Issue | ✴ | DD/MM/YYYY |
-| Photocopy of Qualification | ✴ | JPEG / PNG / PDF · max 5 MB · min 150 DPI · PDFs auto-converted to PNG |
+| Photocopy of Qualification | ✴ | JPEG / PNG · max 5 MB · min 150 DPI |
 | Graduate Course | ✴ | e.g. `Optometry` |
 | Graduate Institution | ✴ | e.g. `Singapore Polytechnic` |
 
@@ -193,7 +191,7 @@ Fees are calculated automatically from the membership type selected.
 | Cheque Number | ✴ if Cheque | 6–9 digits |
 | Bank Transfer Reference | ✴ if Bank Transfer | Alphanumeric |
 | PayNow Reference | ✴ if PayNow | Alphanumeric |
-| Proof of Payment | ✴ | JPEG / PNG / PDF · max 5 MB · PDFs auto-converted to PNG |
+| Proof of Payment | ✴ | JPEG / PNG · max 5 MB |
 
 ---
 
@@ -352,7 +350,7 @@ soaDebug.testPost()          // POST test payload — verify Sheet writes end-to
 | Library | Version | Purpose |
 |---|---|---|
 | [signature_pad](https://github.com/szimek/signature_pad) | 4.1.7 | Canvas-based on-screen signature drawing |
-| [PDF.js](https://mozilla.github.io/pdf.js/) | 3.11.174 | Client-side PDF → PNG conversion before upload |
+
 | [Cropper.js](https://github.com/fengyuanchen/cropperjs) | 1.6.2 | Interactive 1:1 image cropper with circular mask (§6 Profile Picture) |
 
 Both loaded from jsDelivr CDN — no npm, no build step required.

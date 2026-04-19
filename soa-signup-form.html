@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.4.0
+  Version : 1.4.1
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -354,15 +354,15 @@
           <label class="soa-label">Photocopy of Qualification <span class="soa-req">*</span></label>
           <div class="soa-file-zone" id="fz-qual_photocopy"
                data-field="qual_photocopy" data-max-mb="5"
-               data-types="image/jpeg,image/png,application/pdf">
+               data-types="image/jpeg,image/png">
             <input type="file" id="qual_photocopy" name="qual_photocopy"
-                   accept="image/jpeg,image/png,application/pdf"
+                   accept="image/jpeg,image/png"
                    data-required="true"
                    data-err-required="Please upload a photocopy of your qualification." />
             <span class="soa-file-icon">📄</span>
             <span class="soa-file-copy">
               <strong>Click to upload</strong> or drag &amp; drop<br>
-              JPEG, PNG or PDF · max 5 MB · min 150 DPI
+              JPEG or PNG · max 5 MB · min 150 DPI
             </span>
           </div>
           <div class="soa-file-preview" id="fp-qual_photocopy">
@@ -510,15 +510,15 @@
         <label class="soa-label">Proof of Payment <span class="soa-req">*</span></label>
         <div class="soa-file-zone"
              data-field="payment_proof" data-max-mb="5"
-             data-types="image/jpeg,image/png,application/pdf">
+             data-types="image/jpeg,image/png">
           <input type="file" id="payment_proof" name="payment_proof"
-                 accept="image/jpeg,image/png,application/pdf"
+                 accept="image/jpeg,image/png"
                  data-required="true"
                  data-err-required="Please upload proof of payment." />
           <span class="soa-file-icon">🧾</span>
           <span class="soa-file-copy">
             <strong>Click to upload</strong> or drag &amp; drop<br>
-            Screenshot or scan of transfer / cheque / PayNow · JPEG, PNG or PDF · max 5 MB
+            Screenshot or scan of transfer / cheque / PayNow · JPEG or PNG · max 5 MB
           </span>
         </div>
         <div class="soa-file-preview" id="fp-payment_proof">
@@ -776,7 +776,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.4.0</span>
+      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.4.1</span>
       SOA Membership Application Form
     </span>
   </div>
@@ -876,7 +876,6 @@ const COUNTRIES = [
 let sponsorList     = [];          // populated from Apps Script
 let fileDataStore   = {};          // { fieldName: 'data:image/png;base64,...' }
 let signaturePads   = {};          // { canvasId: SignaturePad instance }
-let pdfJsLoaded     = false;
 let sigPadLoaded    = false;
 
 /* ─────────────────────────────────────────────────────────────
@@ -1486,30 +1485,6 @@ function initAutocomplete() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   PDF.js — convert PDF to PNG data URL (first page)
-   ───────────────────────────────────────────────────────────── */
-async function ensurePdfJs() {
-  if (pdfJsLoaded) return;
-  await loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-  pdfJsLoaded = true;
-}
-
-async function pdfToDataUrl(file) {
-  await ensurePdfJs();
-  const buf  = await file.arrayBuffer();
-  const doc  = await pdfjsLib.getDocument({ data: buf }).promise;
-  const page = await doc.getPage(1);
-  const vp   = page.getViewport({ scale: 2 });     // 2× for good resolution
-  const cvs  = document.createElement('canvas');
-  cvs.width  = vp.width;
-  cvs.height = vp.height;
-  await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
-  return cvs.toDataURL('image/png');
-}
-
-/* ─────────────────────────────────────────────────────────────
    File upload handling
    ───────────────────────────────────────────────────────────── */
 async function processFileInput(inputEl, file) {
@@ -1530,22 +1505,12 @@ async function processFileInput(inputEl, file) {
     return;
   }
 
-  let dataUrl;
-  if (file.type === 'application/pdf') {
-    try {
-      dataUrl = await pdfToDataUrl(file);
-    } catch(err) {
-      setError(name, 'Could not process PDF. Please try a JPEG or PNG instead.');
-      return;
-    }
-  } else {
-    dataUrl = await new Promise((res, rej) => {
-      const fr = new FileReader();
-      fr.onload = () => res(fr.result);
-      fr.onerror = rej;
-      fr.readAsDataURL(file);
-    });
-  }
+  const dataUrl = await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = rej;
+    fr.readAsDataURL(file);
+  });
 
   // Dimension check for passport photo
   if (minW || minH) {
