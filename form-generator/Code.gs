@@ -194,7 +194,7 @@ function generatePDF(recordId, prevFileId) {
         val = String(raw);
       }
       // Apps Script replaceText uses Java regex; escape curly braces
-      body.replaceText(`\\{\\{${escapeForRegex_(h)}\\}\\}`, val);
+      body.replaceText(`\\{\\{${escapeForRegex_(h)}\\}\\}`, val || '-');
     });
 
     // 5. Export as PDF and save to Drive ──────────────────────────────────────
