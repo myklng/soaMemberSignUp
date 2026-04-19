@@ -249,7 +249,12 @@
       </div>
       <div class="field">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" required />
+        <div style="position:relative;">
+          <input type="password" id="password" name="password" autocomplete="current-password" required style="padding-right:40px;width:100%;" />
+          <button type="button" id="pw-toggle" onclick="togglePassword()"
+            style="position:absolute;right:0;top:0;height:100%;width:38px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:16px;display:flex;align-items:center;justify-content:center;"
+            title="Show / hide password">&#128065;</button>
+        </div>
       </div>
       <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
     </form>
@@ -299,13 +304,10 @@
 </div>
 
 <script>
-(function () {
-  'use strict';
-
   // ── State ────────────────────────────────────────────────────────────────
-  let authenticated  = false;
-  let records        = [];
-  let currentFileId  = null;  // Drive file ID of most recently generated PDF
+  var authenticated  = false;
+  var records        = [];
+  var currentFileId  = null;
 
   // ── Login ────────────────────────────────────────────────────────────────
   function handleLogin(e) {
@@ -463,11 +465,18 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ── Expose to inline handlers ─────────────────────────────────────────────
-  window.handleLogin    = handleLogin;
-  window.handleLogout   = handleLogout;
-  window.handleGenerate = handleGenerate;
-}());
+  // ── Password toggle ───────────────────────────────────────────────────────
+  function togglePassword() {
+    var inp = document.getElementById('password');
+    var btn = document.getElementById('pw-toggle');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      btn.innerHTML = '&#128064;'; // eyes open
+    } else {
+      inp.type = 'password';
+      btn.innerHTML = '&#128065;'; // eye
+    }
+  }
 </script>
 </body>
 </html>
