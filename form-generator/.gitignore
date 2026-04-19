@@ -1,0 +1,6 @@
+# clasp OAuth token — contains personal credentials, never commit
+.clasprc.json
+
+# Node (if clasp installed locally)
+node_modules/
+package-lock.json

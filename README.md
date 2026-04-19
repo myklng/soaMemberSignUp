@@ -55,6 +55,13 @@ soaMemberSignUp/
 │   └── Code.gs                 ← Google Apps Script backend (runs inside Google)
 ├── wordpress/
 │   └── soa-form-shortcode.php  ← Paste into WordPress to embed the form
+├── form-generator/             ← PDF form generator web app (see form-generator/README.md)
+│   ├── Code.gs
+│   ├── Index.html
+│   ├── appsscript.json
+│   ├── .clasp.json
+│   ├── .gitignore
+│   └── README.md
 ├── .github/
 │   └── workflows/
 │       └── bust-cache.yml      ← Auto-clears WordPress cache on push to main

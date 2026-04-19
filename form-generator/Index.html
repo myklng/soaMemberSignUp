@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOA Form Generator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary:     #0d7377;
+    --primary-dk:  #0a5c60;
+    --primary-lt:  #e6f4f4;
+    --bg:          #f0f4f8;
+    --surface:     #ffffff;
+    --border:      #d1dae4;
+    --text:        #1a202c;
+    --muted:       #64748b;
+    --error:       #dc2626;
+    --error-bg:    #fef2f2;
+    --radius:      8px;
+    --shadow:      0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    min-height: 100vh;
+  }
+
+  /* ── Login ───────────────────────────────────────────────────────────────── */
+  #login-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .login-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .login-logo-mark {
+    width: 36px; height: 36px;
+    background: var(--primary);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px; flex-shrink: 0;
+  }
+  .login-logo-text { font-size: 15px; font-weight: 600; line-height: 1.2; color: var(--text); }
+  .login-logo-sub  { font-size: 11px; color: var(--muted); }
+
+  .login-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .login-card p  { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .field input  {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; font-family: inherit; color: var(--text);
+    outline: none; transition: border-color .15s;
+  }
+  .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,115,119,.12); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 10px 20px; border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: background .15s, opacity .15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; width: 100%; margin-top: 6px; }
+  .btn-primary:hover:not(:disabled) { background: var(--primary-dk); }
+  .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+
+  .alert {
+    padding: 10px 14px; border-radius: 6px; font-size: 13px;
+    margin-top: 14px; display: none;
+  }
+  .alert.show { display: block; }
+  .alert-error   { background: var(--error-bg); color: var(--error); border: 1px solid #fca5a5; }
+  .alert-success { background: var(--primary-lt); color: var(--primary-dk); border: 1px solid #a7d4d5; }
+
+  /* ── Main app ─────────────────────────────────────────────────────────────── */
+  #app-view { display: none; flex-direction: column; min-height: 100vh; }
+  #app-view.visible { display: flex; }
+
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .app-header-logo {
+    width: 28px; height: 28px;
+    background: var(--primary); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .app-header-title { font-weight: 700; font-size: 15px; flex: 1; }
+  .app-header-sub   { font-size: 12px; color: var(--muted); }
+
+  .btn-ghost {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px;
+    cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+
+  .app-body { flex: 1; padding: 24px; max-width: 960px; margin: 0 auto; width: 100%; }
+
+  /* Controls bar */
+  .controls-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex; gap: 12px; align-items: flex-end;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+
+  .ctrl-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 220px; }
+  .ctrl-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+  select#record-select {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 14px; font-family: inherit; color: var(--text);
+    background: var(--surface); cursor: pointer;
+    outline: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 34px;
+    transition: border-color .15s;
+  }
+  select#record-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,115,119,.12); }
+
+  .btn-generate {
+    background: var(--primary); color: #fff;
+    padding: 9px 24px; flex-shrink: 0;
+    font-size: 14px; font-weight: 600; border-radius: 6px;
+    align-self: flex-end;
+  }
+  .btn-generate:hover:not(:disabled) { background: var(--primary-dk); }
+  .btn-generate:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Status */
+  #status-bar { margin-bottom: 16px; min-height: 20px; }
+  .status-msg {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted); padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .status-msg.error   { color: var(--error); background: var(--error-bg); border-color: #fca5a5; }
+  .status-msg.success { color: var(--primary-dk); background: var(--primary-lt); border-color: #a7d4d5; }
+
+  /* Spinner */
+  .spinner {
+    width: 16px; height: 16px; flex-shrink: 0;
+    border: 2px solid currentColor; border-top-color: transparent;
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Preview */
+  #preview-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    display: none;
+  }
+  #preview-area.visible { display: block; }
+
+  .preview-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .preview-filename { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  .btn-download {
+    background: var(--primary); color: #fff;
+    padding: 7px 18px; font-size: 13px; font-weight: 600;
+    border-radius: 6px; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s;
+  }
+  .btn-download:hover { background: var(--primary-dk); }
+
+  #pdf-frame {
+    width: 100%; height: calc(100vh - 280px); min-height: 500px;
+    border: none; display: block;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Login ──────────────────────────────────────────────────────────────── -->
+<div id="login-view">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-mark">SOA</div>
+      <div>
+        <div class="login-logo-text">SOA Singapore</div>
+        <div class="login-logo-sub">Form Generator</div>
+      </div>
+    </div>
+    <h2>Sign in</h2>
+    <p>Enter your credentials to access the form generator.</p>
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">Sign In</button>
+    </form>
+    <div class="alert alert-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── Main app ───────────────────────────────────────────────────────────── -->
+<div id="app-view">
+
+  <header class="app-header">
+    <div class="app-header-logo">SOA</div>
+    <div class="app-header-title">Form Generator</div>
+    <span class="app-header-sub" id="record-count"></span>
+    <button class="btn-ghost" onclick="handleLogout()">Sign Out</button>
+  </header>
+
+  <main class="app-body">
+
+    <div class="controls-card">
+      <div class="ctrl-group">
+        <label for="record-select">Select record</label>
+        <select id="record-select" disabled>
+          <option value="">Loading records…</option>
+        </select>
+      </div>
+      <button class="btn btn-generate" id="generate-btn" disabled onclick="handleGenerate()">
+        Generate PDF
+      </button>
+    </div>
+
+    <div id="status-bar"></div>
+
+    <div id="preview-area">
+      <div class="preview-toolbar">
+        <span class="preview-filename" id="preview-filename"></span>
+        <a id="download-link" class="btn-download" download>
+          ↓ Download PDF
+        </a>
+      </div>
+      <iframe id="pdf-frame" title="PDF preview"></iframe>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let authenticated = false;
+  let records       = [];
+  let currentBlobUrl = null;
+
+  // ── Login ────────────────────────────────────────────────────────────────
+  function handleLogin(e) {
+    e.preventDefault();
+    const btn  = document.getElementById('login-btn');
+    const err  = document.getElementById('login-error');
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value;
+
+    err.classList.remove('show');
+    btn.disabled    = true;
+    btn.textContent = 'Signing in…';
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        btn.disabled    = false;
+        btn.textContent = 'Sign In';
+        if (result.success) {
+          authenticated = true;
+          document.getElementById('login-view').style.display = 'none';
+          document.getElementById('app-view').classList.add('visible');
+          loadRecords();
+        } else {
+          err.textContent = result.error || 'Login failed.';
+          err.classList.add('show');
+        }
+      })
+      .withFailureHandler(function (ex) {
+        btn.disabled    = false;
+        btn.textContent = 'Sign In';
+        err.textContent = 'Error: ' + ex.message;
+        err.classList.add('show');
+      })
+      .login(user, pass);
+  }
+
+  function handleLogout() {
+    authenticated = false;
+    records       = [];
+    clearPreview();
+    setStatus('');
+    document.getElementById('app-view').classList.remove('visible');
+    document.getElementById('login-view').style.display = 'flex';
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('login-error').classList.remove('show');
+    document.getElementById('record-select').innerHTML = '<option value="">Loading records…</option>';
+    document.getElementById('record-select').disabled  = true;
+    document.getElementById('generate-btn').disabled   = true;
+  }
+
+  // ── Records ──────────────────────────────────────────────────────────────
+  function loadRecords() {
+    setStatus('Loading records…', 'loading');
+
+    google.script.run
+      .withSuccessHandler(function (data) {
+        records = data;
+        const sel = document.getElementById('record-select');
+        sel.innerHTML = data.length
+          ? '<option value="">— Select a record —</option>' +
+            data.map(r => `<option value="${escHtml(r.id)}">${escHtml(r.label)}</option>`).join('')
+          : '<option value="">No records found</option>';
+        sel.disabled = false;
+        document.getElementById('generate-btn').disabled = !data.length;
+        document.getElementById('record-count').textContent =
+          data.length ? data.length + ' record' + (data.length === 1 ? '' : 's') : '';
+        setStatus('');
+      })
+      .withFailureHandler(function (ex) {
+        setStatus('Failed to load records: ' + ex.message, 'error');
+      })
+      .getRecords();
+  }
+
+  // ── Generate ─────────────────────────────────────────────────────────────
+  function handleGenerate() {
+    const sel      = document.getElementById('record-select');
+    const recordId = sel.value;
+    if (!recordId) { setStatus('Please select a record first.', 'error'); return; }
+
+    clearPreview();
+    setStatus('Generating PDF…', 'loading');
+    document.getElementById('generate-btn').disabled = true;
+    document.getElementById('record-select').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function (result) {
+        document.getElementById('generate-btn').disabled  = false;
+        document.getElementById('record-select').disabled = false;
+
+        if (!result.success) {
+          setStatus('Generation failed: ' + (result.error || 'Unknown error.'), 'error');
+          return;
+        }
+
+        setStatus('PDF generated successfully.', 'success');
+        showPdf(result.base64, result.filename);
+      })
+      .withFailureHandler(function (ex) {
+        document.getElementById('generate-btn').disabled  = false;
+        document.getElementById('record-select').disabled = false;
+        setStatus('Error: ' + ex.message, 'error');
+      })
+      .generatePDF(recordId);
+  }
+
+  // ── PDF preview ───────────────────────────────────────────────────────────
+  function showPdf(base64, filename) {
+    // Revoke any previous Blob URL to free memory
+    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+
+    const bytes = Uint8Array.from(atob(base64), function (c) { return c.charCodeAt(0); });
+    const blob  = new Blob([bytes], { type: 'application/pdf' });
+    currentBlobUrl = URL.createObjectURL(blob);
+
+    document.getElementById('pdf-frame').src       = currentBlobUrl;
+    document.getElementById('download-link').href  = currentBlobUrl;
+    document.getElementById('download-link').setAttribute('download', filename);
+    document.getElementById('preview-filename').textContent = filename;
+    document.getElementById('preview-area').classList.add('visible');
+  }
+
+  function clearPreview() {
+    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+    document.getElementById('preview-area').classList.remove('visible');
+    document.getElementById('pdf-frame').src = '';
+  }
+
+  // ── Status bar ────────────────────────────────────────────────────────────
+  function setStatus(msg, type) {
+    const bar = document.getElementById('status-bar');
+    if (!msg) { bar.innerHTML = ''; return; }
+    const spinner = type === 'loading' ? '<div class="spinner"></div>' : '';
+    bar.innerHTML =
+      `<div class="status-msg ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}">
+         ${spinner}<span>${escHtml(msg)}</span>
+       </div>`;
+  }
+
+  // ── Util ──────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Expose to inline handlers ─────────────────────────────────────────────
+  window.handleLogin    = handleLogin;
+  window.handleLogout   = handleLogout;
+  window.handleGenerate = handleGenerate;
+}());
+</script>
+</body>
+</html>
