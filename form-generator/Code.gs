@@ -152,17 +152,24 @@ function generatePDF(recordId) {
     const body = doc.getBody();
 
     // 3. Replace {{img_*}} slots first (must happen before text replacements) ─
-    const folder = DriveApp.getFolderById(folderId);
+    const folder   = DriveApp.getFolderById(folderId);
+    const initials = getInitials_(String(record['FullName_EN'] || '')) || 'XX';
+    const pfx      = `${recordId}_${initials}`;
 
-    // Image slot definitions: placeholder → filename, maxW, maxH
+    // Image slots mirror the Drive file naming from the membership signup form:
+    //   {signUpID}_{initials}_{suffix}.{png|jpg}
+    // getFileBlob_() tries .png first, then .jpg — extension varies by upload.
     const imageSlots = [
-      { placeholder: '{{img_signature}}', filename: `sig_${recordId}.png`,  maxW: 400, maxH: 150 },
-      { placeholder: '{{img_doc1}}',      filename: `doc1_${recordId}.jpg`, maxW: 800, maxH: 600 },
-      { placeholder: '{{img_doc2}}',      filename: `doc2_${recordId}.jpg`, maxW: 800, maxH: 600 },
+      { placeholder: '{{img_passport_photo}}',  base: `${pfx}_passport_photo`,         maxW: 400, maxH: 500 },
+      { placeholder: '{{img_qual_photocopy}}',  base: `${pfx}_qualification_photocopy`, maxW: 800, maxH: 600 },
+      { placeholder: '{{img_payment_proof}}',   base: `${pfx}_payment_proof`,           maxW: 800, maxH: 600 },
+      { placeholder: '{{img_proposer_sig}}',    base: `${pfx}_proposer_signature`,      maxW: 400, maxH: 150 },
+      { placeholder: '{{img_seconder_sig}}',    base: `${pfx}_seconder_signature`,      maxW: 400, maxH: 150 },
+      { placeholder: '{{img_agreement_sig}}',   base: `${pfx}_agreement_signature`,     maxW: 400, maxH: 150 },
     ];
 
     imageSlots.forEach(slot => {
-      const blob = getFileBlob_(folder, slot.filename);
+      const blob = getFileBlob_(folder, slot.base);
       replaceSlotWithImage_(body, slot.placeholder, blob, slot.maxW, slot.maxH);
     });
 
@@ -201,13 +208,27 @@ function generatePDF(recordId) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Fetches the first file in `folder` with the given `filename`.
- * Returns a Blob, or null if no file is found.
+ * Returns the initials of a full name — first letter of each word, uppercase.
+ * Mirrors getInitials_() in the membership signup Apps Script.
+ * e.g. "John Smith Tan" → "JST"
  */
-function getFileBlob_(folder, filename) {
+function getInitials_(name) {
+  return (name || '').trim().split(/\s+/).filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase()).join('');
+}
+
+/**
+ * Finds a file in `folder` whose name matches `baseName` + ".png" or ".jpg"
+ * (tries .png first — signatures are always PNG; photo uploads may be either).
+ * Returns a Blob, or null if no matching file is found.
+ */
+function getFileBlob_(folder, baseName) {
   try {
-    const iter = folder.getFilesByName(filename);
-    return iter.hasNext() ? iter.next().getBlob() : null;
+    for (const ext of ['.png', '.jpg']) {
+      const iter = folder.getFilesByName(baseName + ext);
+      if (iter.hasNext()) return iter.next().getBlob();
+    }
+    return null;
   } catch (_) {
     return null;
   }

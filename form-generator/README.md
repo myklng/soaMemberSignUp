@@ -148,11 +148,14 @@ All `{{placeholder}}` tokens not matched to a sheet column are left as-is (not r
 
 Create image slots by typing one of the following placeholder strings into a **dedicated paragraph or table cell** (the cell or paragraph should contain only the placeholder):
 
-| Placeholder | Purpose | Max dimensions |
+| Placeholder | Matching Drive file suffix | Max dimensions |
 |---|---|---|
-| `{{img_signature}}` | Applicant signature | 400 × 150 px |
-| `{{img_doc1}}` | Supporting document image 1 | 800 × 600 px |
-| `{{img_doc2}}` | Supporting document image 2 | 800 × 600 px |
+| `{{img_passport_photo}}` | `_passport_photo` | 400 × 500 px |
+| `{{img_qual_photocopy}}` | `_qualification_photocopy` | 800 × 600 px |
+| `{{img_payment_proof}}` | `_payment_proof` | 800 × 600 px |
+| `{{img_proposer_sig}}` | `_proposer_signature` | 400 × 150 px |
+| `{{img_seconder_sig}}` | `_seconder_signature` | 400 × 150 px |
+| `{{img_agreement_sig}}` | `_agreement_signature` | 400 × 150 px |
 
 The backend clears that paragraph/cell and inserts the image, scaled down to fit the constraints while preserving aspect ratio. If no matching file is found in Drive, the placeholder is removed silently.
 
@@ -160,22 +163,37 @@ The backend clears that paragraph/cell and inserts the image, scaled down to fit
 
 ## Drive Folder — Image Naming Convention
 
-Images must be placed in the Drive folder configured as `DRIVE_FOLDER_ID`. File names are tied to the record's `SignUpID`:
+The generator reads files directly from the Drive folder that the membership signup form already writes to. **No renaming needed** — file names follow the same convention used during signup:
 
-| File name | Purpose | Dimension cap |
+```
+{SignUpID}_{Initials}_{suffix}.{ext}
+```
+
+- **SignUpID** — the application ID (e.g. `20261604-143022`)
+- **Initials** — first letter of each word in the applicant's English full name, uppercase (e.g. `John Smith Tan` → `JST`)
+- **suffix** — one of the values below
+- **ext** — `.png` or `.jpg` depending on what was originally uploaded (the generator tries `.png` first, then `.jpg`)
+
+| Suffix | Content | Dimension cap |
 |---|---|---|
-| `sig_{SignUpID}.png` | Signature | 400 × 150 px |
-| `doc1_{SignUpID}.jpg` | Supporting document 1 | 800 × 600 px |
-| `doc2_{SignUpID}.jpg` | Supporting document 2 | 800 × 600 px |
+| `passport_photo` | Profile / passport photo | 400 × 500 px |
+| `qualification_photocopy` | Qualification document scan | 800 × 600 px |
+| `payment_proof` | Payment receipt / screenshot | 800 × 600 px |
+| `proposer_signature` | Proposer's drawn signature | 400 × 150 px |
+| `seconder_signature` | Seconder's drawn signature | 400 × 150 px |
+| `agreement_signature` | Applicant's agreement signature | 400 × 150 px |
 
-**Example** (SignUpID = `20261604-143022`):
+**Example** (applicant: John Smith Tan, SignUpID: `20261604-143022`):
 ```
-sig_20261604-143022.png
-doc1_20261604-143022.jpg
-doc2_20261604-143022.jpg
+20261604-143022_JST_passport_photo.png
+20261604-143022_JST_qualification_photocopy.png
+20261604-143022_JST_payment_proof.png
+20261604-143022_JST_proposer_signature.png
+20261604-143022_JST_seconder_signature.png
+20261604-143022_JST_agreement_signature.png
 ```
 
-Images are never upscaled — only downscaled if they exceed the cap.
+Images are never upscaled — only downscaled if they exceed the dimension cap.
 
 ---
 
