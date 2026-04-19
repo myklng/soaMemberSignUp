@@ -195,23 +195,29 @@
 
   .preview-toolbar {
     display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--bg);
   }
   .preview-filename { font-size: 13px; font-weight: 600; color: var(--text); }
 
-  .btn-download {
-    background: var(--primary); color: #fff;
+  .preview-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn-action {
     padding: 7px 18px; font-size: 13px; font-weight: 600;
-    border-radius: 6px; text-decoration: none;
+    border-radius: 6px; text-decoration: none; border: none; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
-    transition: background .15s;
+    transition: background .15s, color .15s;
+    font-family: inherit;
   }
-  .btn-download:hover { background: var(--primary-dk); }
+  .btn-action-primary { background: var(--primary); color: #fff; }
+  .btn-action-primary:hover { background: var(--primary-dk); }
+  .btn-action-outline { background: none; border: 1px solid var(--border); color: var(--text); }
+  .btn-action-outline:hover { border-color: var(--primary); color: var(--primary); }
 
   #pdf-frame {
-    width: 100%; height: calc(100vh - 280px); min-height: 500px;
+    width: 100%; height: calc(100vh - 220px); min-height: 500px;
     border: none; display: block;
   }
 </style>
@@ -274,11 +280,12 @@
     <div id="preview-area">
       <div class="preview-toolbar">
         <span class="preview-filename" id="preview-filename"></span>
-        <a id="download-link" class="btn-download" download>
-          ↓ Download PDF
-        </a>
+        <div class="preview-actions">
+          <a id="open-link" class="btn-action btn-action-outline" target="_blank" rel="noopener">↗ Open in Drive</a>
+          <a id="download-link" class="btn-action btn-action-primary" target="_blank" rel="noopener">↓ Download PDF</a>
+        </div>
       </div>
-      <iframe id="pdf-frame" title="PDF preview"></iframe>
+      <iframe id="pdf-frame" title="PDF preview" allowfullscreen></iframe>
     </div>
 
   </main>
@@ -289,9 +296,9 @@
   'use strict';
 
   // ── State ────────────────────────────────────────────────────────────────
-  let authenticated = false;
-  let records       = [];
-  let currentBlobUrl = null;
+  let authenticated  = false;
+  let records        = [];
+  let currentFileId  = null;  // Drive file ID of most recently generated PDF
 
   // ── Login ────────────────────────────────────────────────────────────────
   function handleLogin(e) {
@@ -331,6 +338,7 @@
   function handleLogout() {
     authenticated = false;
     records       = [];
+    currentFileId = null;
     clearPreview();
     setStatus('');
     document.getElementById('app-view').classList.remove('visible');
@@ -378,6 +386,9 @@
     document.getElementById('generate-btn').disabled = true;
     document.getElementById('record-select').disabled = true;
 
+    const prevFileId = currentFileId;
+    currentFileId = null;
+
     google.script.run
       .withSuccessHandler(function (result) {
         document.getElementById('generate-btn').disabled  = false;
@@ -389,34 +400,30 @@
         }
 
         setStatus('PDF generated successfully.', 'success');
-        showPdf(result.base64, result.filename);
+        currentFileId = result.fileId;
+        showPdf(result.fileId, result.filename);
       })
       .withFailureHandler(function (ex) {
         document.getElementById('generate-btn').disabled  = false;
         document.getElementById('record-select').disabled = false;
         setStatus('Error: ' + ex.message, 'error');
       })
-      .generatePDF(recordId);
+      .generatePDF(recordId, prevFileId);
   }
 
   // ── PDF preview ───────────────────────────────────────────────────────────
-  function showPdf(base64, filename) {
-    // Revoke any previous Blob URL to free memory
-    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
-
-    const bytes = Uint8Array.from(atob(base64), function (c) { return c.charCodeAt(0); });
-    const blob  = new Blob([bytes], { type: 'application/pdf' });
-    currentBlobUrl = URL.createObjectURL(blob);
-
-    document.getElementById('pdf-frame').src       = currentBlobUrl;
-    document.getElementById('download-link').href  = currentBlobUrl;
-    document.getElementById('download-link').setAttribute('download', filename);
+  function showPdf(fileId, filename) {
+    document.getElementById('pdf-frame').src =
+      'https://drive.google.com/file/d/' + fileId + '/preview';
+    document.getElementById('open-link').href =
+      'https://drive.google.com/file/d/' + fileId + '/view';
+    document.getElementById('download-link').href =
+      'https://drive.google.com/uc?export=download&id=' + fileId;
     document.getElementById('preview-filename').textContent = filename;
     document.getElementById('preview-area').classList.add('visible');
   }
 
   function clearPreview() {
-    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
     document.getElementById('preview-area').classList.remove('visible');
     document.getElementById('pdf-frame').src = '';
   }

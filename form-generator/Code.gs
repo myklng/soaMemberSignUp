@@ -115,7 +115,11 @@ function getRecords() {
  * Returns { success: true, base64: '...', filename: '...' }
  *      or { success: false, error: '...' }
  */
-function generatePDF(recordId) {
+/**
+ * prevFileId — optional Drive file ID of the previous generated PDF to trash
+ *              before generating the new one (cleanup from prior call).
+ */
+function generatePDF(recordId, prevFileId) {
   const props      = PropertiesService.getScriptProperties();
   const sheetId    = props.getProperty('SHEET_ID');
   const tabName    = props.getProperty('SHEET_TAB') || 'Applications';
@@ -125,6 +129,11 @@ function generatePDF(recordId) {
   if (!sheetId)    throw new Error('SHEET_ID not set in Script Properties.');
   if (!templateId) throw new Error('TEMPLATE_DOC_ID not set in Script Properties.');
   if (!folderId)   throw new Error('DRIVE_FOLDER_ID not set in Script Properties.');
+
+  // Trash the previous generated PDF (from prior frontend call) ──────────────
+  if (prevFileId) {
+    try { DriveApp.getFileById(prevFileId).setTrashed(true); } catch (_) {}
+  }
 
   // 1. Locate the record ─────────────────────────────────────────────────────
   const ss     = SpreadsheetApp.openById(sheetId);
@@ -143,9 +152,11 @@ function generatePDF(recordId) {
   if (!record) throw new Error(`Record "${recordId}" not found in sheet.`);
 
   // 2. Copy template ──────────────────────────────────────────────────────────
+  const filename = `SOA_Application_${recordId}.pdf`;
   const tempName = `_SOA_temp_${recordId}_${Date.now()}`;
   const tempFile = DriveApp.getFileById(templateId).makeCopy(tempName);
   const docId    = tempFile.getId();
+  let   pdfFileId = null;
 
   try {
     const doc  = DocumentApp.openById(docId);
@@ -186,19 +197,29 @@ function generatePDF(recordId) {
       body.replaceText(`\\{\\{${escapeForRegex_(h)}\\}\\}`, val);
     });
 
-    // 5. Export as PDF ─────────────────────────────────────────────────────────
+    // 5. Export as PDF and save to Drive ──────────────────────────────────────
     doc.saveAndClose();
     const pdfBlob = DriveApp.getFileById(docId).getAs('application/pdf');
-    const base64  = Utilities.base64Encode(pdfBlob.getBytes());
+    pdfBlob.setName(filename);
+    const pdfFile = folder.createFile(pdfBlob);
+    pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    pdfFileId = pdfFile.getId();
 
     return {
       success:  true,
-      base64,
-      filename: `SOA_Application_${recordId}.pdf`,
+      fileId:   pdfFileId,
+      filename,
     };
 
+  } catch (err) {
+    // If PDF was saved but something else failed, clean it up
+    if (pdfFileId) {
+      try { DriveApp.getFileById(pdfFileId).setTrashed(true); } catch (_) {}
+    }
+    throw err;
+
   } finally {
-    // 6. Always trash the temp copy, even if an error occurred ─────────────
+    // Always trash the temporary Doc copy ─────────────────────────────────────
     try { DriveApp.getFileById(docId).setTrashed(true); } catch (_) {}
   }
 }

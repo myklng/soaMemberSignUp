@@ -131,18 +131,88 @@ To push code changes without generating a new URL:
 
 Insert `{{FieldName}}` anywhere in the document body, headers, footers, or table cells. The field name must exactly match a column header in the Google Sheet (case-sensitive).
 
-**Example — columns from the Applications sheet:**
-
-```
-Applicant Name: {{FullName_EN}}
-NRIC / FIN:     {{NRIC}}
-Date of Birth:  {{DateOfBirth}}
-Email:          {{Email}}
-Membership Type: {{MembershipType}}
-Submitted:      {{SubmittedAt}}
-```
-
 All `{{placeholder}}` tokens not matched to a sheet column are left as-is (not removed).
+
+#### Applications sheet (`SHEET_TAB = Applications`)
+
+| Placeholder | Content |
+|---|---|
+| `{{SignUpID}}` | Unique application ID (e.g. `20261604-143022`) |
+| `{{SubmittedAt}}` | Submission timestamp |
+| `{{FullName_EN}}` | Full name in English |
+| `{{FullName_ZH}}` | Full name in Chinese (if provided) |
+| `{{DateOfBirth}}` | Date of birth (DD/MM/YYYY) |
+| `{{NRIC}}` | NRIC / FIN number |
+| `{{Citizenship}}` | Citizenship (e.g. `Singaporean`) |
+| `{{Email}}` | Email address |
+| `{{OOB_Number}}` | Optometry Board registration number |
+| `{{IsPracticing}}` | `Yes` or `No` |
+| `{{PracticeName}}` | Practice / clinic name |
+| `{{PracticeAddress}}` | Practice street address |
+| `{{PracticeCountry}}` | Practice country |
+| `{{PracticeTel}}` | Practice telephone |
+| `{{ResidenceAddress}}` | Home street address |
+| `{{ResidenceCountry}}` | Home country |
+| `{{Tel_Home}}` | Home telephone |
+| `{{Tel_Mobile}}` | Mobile telephone |
+| `{{QualDescription}}` | Qualification held (e.g. `Bachelor of Optometry`) |
+| `{{QualDateOfIssue}}` | Date qualification was issued (DD/MM/YYYY) |
+| `{{GraduateCourse}}` | Graduate course name |
+| `{{GraduateInstitution}}` | Graduate institution name |
+| `{{ProfessionalOrgs}}` | Other optometric org memberships (semicolon-separated) |
+| `{{RelevantExperience}}` | Relevant experience (free text) |
+| `{{OnlineQuestionnaire}}` | `Yes` or `No` |
+| `{{MembershipType}}` | Membership tier (e.g. `Ordinary`) |
+| `{{EntranceFee_SGD}}` | Entrance fee in SGD |
+| `{{MembershipFee_SGD}}` | Annual membership fee in SGD |
+| `{{TotalFee_SGD}}` | Total fee in SGD |
+| `{{PaymentMethod}}` | `Cheque`, `Bank Transfer`, or `PayNow` |
+| `{{ChequeNumber}}` | Cheque number (if applicable) |
+| `{{BankTransferRef}}` | Bank transfer reference (if applicable) |
+| `{{PayNowRef}}` | PayNow reference (if applicable) |
+| `{{ProposerName}}` | Proposer's full name |
+| `{{ProposerIsSOAMember}}` | `Yes` or `No` |
+| `{{SeconderName}}` | Seconder's full name |
+| `{{SeconderIsSOAMember}}` | `Yes` or `No` |
+| `{{File_PassportPhoto}}` | Drive URL of passport photo |
+| `{{File_QualificationPhotocopy}}` | Drive URL of qualification photocopy |
+| `{{File_PaymentProof}}` | Drive URL of payment proof |
+| `{{File_DeclarationSignature}}` | Drive URL of declaration signature |
+| `{{File_ProposerSignature}}` | Drive URL of proposer signature |
+| `{{File_SeconderSignature}}` | Drive URL of seconder signature |
+| `{{File_AgreementSignature}}` | Drive URL of agreement signature |
+
+#### Renewal sheet (`SHEET_TAB = Renewal`)
+
+| Placeholder | Content |
+|---|---|
+| `{{RenewalID}}` | Unique renewal ID |
+| `{{SubmittedAt}}` | Submission timestamp |
+| `{{FullName_EN}}` | Full name in English |
+| `{{FullName_ZH}}` | Full name in Chinese (if provided) |
+| `{{DateOfBirth}}` | Date of birth (DD/MM/YYYY) |
+| `{{NRIC}}` | NRIC / FIN number |
+| `{{Citizenship}}` | Citizenship |
+| `{{Email}}` | Email address |
+| `{{OOB_Number}}` | Optometry Board registration number |
+| `{{IsPracticing}}` | `Yes` or `No` |
+| `{{PracticeName}}` | Practice / clinic name |
+| `{{PracticeAddress}}` | Practice street address |
+| `{{PracticeCountry}}` | Practice country |
+| `{{PracticeTel}}` | Practice telephone |
+| `{{ResidenceAddress}}` | Home street address |
+| `{{ResidenceCountry}}` | Home country |
+| `{{Tel_Home}}` | Home telephone |
+| `{{Tel_Mobile}}` | Mobile telephone |
+| `{{RenewalType}}` | Renewal membership tier |
+| `{{RenewalFee_SGD}}` | Renewal fee in SGD |
+| `{{TotalFee_SGD}}` | Total fee in SGD |
+| `{{PaymentMethod}}` | `Cheque`, `Bank Transfer`, or `PayNow` |
+| `{{ChequeNumber}}` | Cheque number (if applicable) |
+| `{{BankTransferRef}}` | Bank transfer reference (if applicable) |
+| `{{PayNowRef}}` | PayNow reference (if applicable) |
+| `{{File_PassportPhoto}}` | Drive URL of passport photo |
+| `{{File_PaymentProof}}` | Drive URL of payment proof |
 
 ### Image slots
 
