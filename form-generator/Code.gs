@@ -18,6 +18,8 @@
  *   Who has access : Anyone with Google Account
  */
 
+const VERSION = 'v1.0.0';
+
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
 // Project Settings → Script properties instead.
@@ -32,6 +34,10 @@ function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('SOA Form Generator')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function getVersion() {
+  return VERSION;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -116,6 +116,12 @@
   .app-header-title { font-weight: 700; font-size: 15px; flex: 1; }
   .app-header-sub   { font-size: 12px; color: var(--muted); }
 
+  .version-badge {
+    font-size: 11px; font-weight: 600; color: var(--primary);
+    background: var(--primary-lt); border: 1px solid #a7d4d5;
+    border-radius: 20px; padding: 2px 9px; letter-spacing: .02em;
+  }
+
   .btn-ghost {
     background: none; border: 1px solid var(--border); color: var(--muted);
     padding: 6px 14px; font-size: 12px; font-weight: 600; border-radius: 6px;
@@ -257,6 +263,7 @@
   <header class="app-header">
     <div class="app-header-logo">SOA</div>
     <div class="app-header-title">Form Generator</div>
+    <span class="version-badge" id="version-badge"></span>
     <span class="app-header-sub" id="record-count"></span>
     <button class="btn-ghost" onclick="handleLogout()">Sign Out</button>
   </header>
@@ -320,6 +327,7 @@
           authenticated = true;
           document.getElementById('login-view').style.display = 'none';
           document.getElementById('app-view').classList.add('visible');
+          loadVersion();
           loadRecords();
         } else {
           err.textContent = result.error || 'Login failed.';
@@ -349,6 +357,15 @@
     document.getElementById('record-select').innerHTML = '<option value="">Loading records…</option>';
     document.getElementById('record-select').disabled  = true;
     document.getElementById('generate-btn').disabled   = true;
+  }
+
+  // ── Version ──────────────────────────────────────────────────────────────
+  function loadVersion() {
+    google.script.run
+      .withSuccessHandler(function (v) {
+        if (v) document.getElementById('version-badge').textContent = v;
+      })
+      .getVersion();
   }
 
   // ── Records ──────────────────────────────────────────────────────────────
