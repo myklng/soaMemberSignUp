@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -175,7 +175,8 @@ function generatePDF(recordId, prevFileId) {
 
     // Image slots mirror the Drive file naming from the membership signup form:
     //   {signUpID}_{initials}_{suffix}.{png|jpg}
-    // getFileBlob_() tries .png first, then .jpg — extension varies by upload.
+    // getFileBlob_() tries .png first, then .jpg/.jpeg — extension varies by upload.
+    Logger.log('Image search prefix: ' + pfx);
     const imageSlots = [
       { placeholder: '{{img_passport_photo}}',  base: `${pfx}_passport_photo`,         maxW: 400, maxH: 500 },
       { placeholder: '{{img_qual_photocopy}}',  base: `${pfx}_qualification_photocopy`, maxW: 800, maxH: 600 },
@@ -251,12 +252,17 @@ function getInitials_(name) {
  */
 function getFileBlob_(folder, baseName) {
   try {
-    for (const ext of ['.png', '.jpg']) {
+    for (const ext of ['.png', '.jpg', '.jpeg']) {
       const iter = folder.getFilesByName(baseName + ext);
-      if (iter.hasNext()) return iter.next().getBlob();
+      if (iter.hasNext()) {
+        Logger.log('Found: ' + baseName + ext);
+        return iter.next().getBlob();
+      }
     }
+    Logger.log('Not found: ' + baseName + ' (.png/.jpg/.jpeg)');
     return null;
-  } catch (_) {
+  } catch (err) {
+    Logger.log('Error searching for ' + baseName + ': ' + err.message);
     return null;
   }
 }

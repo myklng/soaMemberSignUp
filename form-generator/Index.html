@@ -313,6 +313,29 @@
   var records       = [];
   var currentFileId = null;
 
+  var SESSION_KEY = 'soa_fg_session';
+  var SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+
+  // ── Session helpers ───────────────────────────────────────────────────────
+  function saveSession() {
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ expiry: Date.now() + SESSION_TTL }));
+    } catch (e) {}
+  }
+
+  function clearSession() {
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+  }
+
+  function hasValidSession() {
+    try {
+      var raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return false;
+      var s = JSON.parse(raw);
+      return s && s.expiry && Date.now() < s.expiry;
+    } catch (e) { return false; }
+  }
+
   // ── Wire up events after DOM ready ────────────────────────────────────────
   document.getElementById('login-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -348,6 +371,7 @@
         btn.textContent = 'Sign In';
         if (result.success) {
           authenticated = true;
+          saveSession();
           document.getElementById('login-view').style.display = 'none';
           document.getElementById('app-view').classList.add('visible');
           loadVersion();
@@ -370,6 +394,7 @@
     authenticated = false;
     records       = [];
     currentFileId = null;
+    clearSession();
     clearPreview();
     setStatus('');
     document.getElementById('app-view').classList.remove('visible');
@@ -487,6 +512,15 @@
     return String(str)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Auto-restore session on page load ─────────────────────────────────────
+  if (hasValidSession()) {
+    authenticated = true;
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('app-view').classList.add('visible');
+    loadVersion();
+    loadRecords();
   }
 </script>
 </body>

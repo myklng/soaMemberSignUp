@@ -127,13 +127,22 @@ To push code changes without generating a new URL:
 
 ## Google Doc Template Setup
 
+### Image placeholders
+
+Place these in a **dedicated paragraph or table cell** (nothing else in the cell). The backend replaces the placeholder with the actual image, scaled to fit. If no matching file is found in Drive, the placeholder is removed silently.
+
+| Placeholder | Content | Max dimensions |
+|---|---|---|
+| `{{img_passport_photo}}` | Profile / passport photo | 400 × 500 px |
+| `{{img_qual_photocopy}}` | Qualification document scan | 800 × 600 px |
+| `{{img_payment_proof}}` | Payment receipt / screenshot | 800 × 600 px |
+| `{{img_proposer_sig}}` | Proposer's drawn signature | 400 × 150 px |
+| `{{img_seconder_sig}}` | Seconder's drawn signature | 400 × 150 px |
+| `{{img_agreement_sig}}` | Applicant's agreement signature | 400 × 150 px |
+
 ### Text placeholders
 
-Insert `{{FieldName}}` anywhere in the document body, headers, footers, or table cells. The field name must exactly match a column header in the Google Sheet (case-sensitive).
-
-All `{{placeholder}}` tokens not matched to a sheet column are left as-is (not removed).
-
-#### Applications sheet (`SHEET_TAB = Applications`)
+Insert `{{FieldName}}` anywhere in the document body, headers, footers, or table cells. The field name must exactly match a column header in the Google Sheet (case-sensitive). Blank fields are replaced with `-`.
 
 | Placeholder | Content |
 |---|---|
@@ -181,53 +190,6 @@ All `{{placeholder}}` tokens not matched to a sheet column are left as-is (not r
 | `{{File_ProposerSignature}}` | Drive URL of proposer signature |
 | `{{File_SeconderSignature}}` | Drive URL of seconder signature |
 | `{{File_AgreementSignature}}` | Drive URL of agreement signature |
-
-#### Renewal sheet (`SHEET_TAB = Renewal`)
-
-| Placeholder | Content |
-|---|---|
-| `{{RenewalID}}` | Unique renewal ID |
-| `{{SubmittedAt}}` | Submission timestamp |
-| `{{FullName_EN}}` | Full name in English |
-| `{{FullName_ZH}}` | Full name in Chinese (if provided) |
-| `{{DateOfBirth}}` | Date of birth (DD/MM/YYYY) |
-| `{{NRIC}}` | NRIC / FIN number |
-| `{{Citizenship}}` | Citizenship |
-| `{{Email}}` | Email address |
-| `{{OOB_Number}}` | Optometry Board registration number |
-| `{{IsPracticing}}` | `Yes` or `No` |
-| `{{PracticeName}}` | Practice / clinic name |
-| `{{PracticeAddress}}` | Practice street address |
-| `{{PracticeCountry}}` | Practice country |
-| `{{PracticeTel}}` | Practice telephone |
-| `{{ResidenceAddress}}` | Home street address |
-| `{{ResidenceCountry}}` | Home country |
-| `{{Tel_Home}}` | Home telephone |
-| `{{Tel_Mobile}}` | Mobile telephone |
-| `{{RenewalType}}` | Renewal membership tier |
-| `{{RenewalFee_SGD}}` | Renewal fee in SGD |
-| `{{TotalFee_SGD}}` | Total fee in SGD |
-| `{{PaymentMethod}}` | `Cheque`, `Bank Transfer`, or `PayNow` |
-| `{{ChequeNumber}}` | Cheque number (if applicable) |
-| `{{BankTransferRef}}` | Bank transfer reference (if applicable) |
-| `{{PayNowRef}}` | PayNow reference (if applicable) |
-| `{{File_PassportPhoto}}` | Drive URL of passport photo |
-| `{{File_PaymentProof}}` | Drive URL of payment proof |
-
-### Image slots
-
-Create image slots by typing one of the following placeholder strings into a **dedicated paragraph or table cell** (the cell or paragraph should contain only the placeholder):
-
-| Placeholder | Matching Drive file suffix | Max dimensions |
-|---|---|---|
-| `{{img_passport_photo}}` | `_passport_photo` | 400 × 500 px |
-| `{{img_qual_photocopy}}` | `_qualification_photocopy` | 800 × 600 px |
-| `{{img_payment_proof}}` | `_payment_proof` | 800 × 600 px |
-| `{{img_proposer_sig}}` | `_proposer_signature` | 400 × 150 px |
-| `{{img_seconder_sig}}` | `_seconder_signature` | 400 × 150 px |
-| `{{img_agreement_sig}}` | `_agreement_signature` | 400 × 150 px |
-
-The backend clears that paragraph/cell and inserts the image, scaled down to fit the constraints while preserving aspect ratio. If no matching file is found in Drive, the placeholder is removed silently.
 
 ---
 
