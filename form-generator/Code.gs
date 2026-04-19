@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.3';
+const VERSION = 'v1.1.4';
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -321,27 +321,64 @@ function replaceSlotWithImage_(body, placeholder, imageBlob, maxW, maxH) {
     if (imageBlob) {
       const newPara = cell.appendParagraph('');
       const img     = newPara.insertInlineImage(0, imageBlob);
-      scaleInlineImage_(img, maxW, maxH);
+      scaleInlineImage_(img, imageBlob, maxW, maxH);
     }
   } else {
     para.clear();
     if (imageBlob) {
       const img = para.insertInlineImage(0, imageBlob);
-      scaleInlineImage_(img, maxW, maxH);
+      scaleInlineImage_(img, imageBlob, maxW, maxH);
     }
   }
 }
 
 /**
  * Scales an InlineImage to fit within maxW × maxH, preserving aspect ratio.
- * Never upscales beyond the image's natural dimensions.
+ * Reads natural dimensions from the blob binary header (PNG/JPEG) to avoid
+ * using the rendered size that Google Docs may have auto-distorted on insert.
+ * Falls back to img.getWidth/getHeight if header parsing fails.
  */
-function scaleInlineImage_(img, maxW, maxH) {
-  const w     = img.getWidth();
-  const h     = img.getHeight();
+function scaleInlineImage_(img, blob, maxW, maxH) {
+  const dims = getImageDimensions_(blob);
+  const w    = dims ? dims.w : img.getWidth();
+  const h    = dims ? dims.h : img.getHeight();
+  if (!w || !h) return;
   const scale = Math.min(maxW / w, maxH / h, 1);
   img.setWidth(Math.round(w * scale));
   img.setHeight(Math.round(h * scale));
+}
+
+/**
+ * Reads natural pixel dimensions from a PNG or JPEG blob's binary header.
+ * Returns { w, h } or null if the format is unrecognised.
+ */
+function getImageDimensions_(blob) {
+  if (!blob) return null;
+  try {
+    const b = blob.getBytes();
+    // PNG: signature [137,80,78,71,...]; width at bytes 16-19, height at 20-23
+    if ((b[0] & 0xFF) === 137 && (b[1] & 0xFF) === 80 && (b[2] & 0xFF) === 78 && (b[3] & 0xFF) === 71) {
+      const w = (((b[16]&0xFF)<<24)|((b[17]&0xFF)<<16)|((b[18]&0xFF)<<8)|(b[19]&0xFF)) >>> 0;
+      const h = (((b[20]&0xFF)<<24)|((b[21]&0xFF)<<16)|((b[22]&0xFF)<<8)|(b[23]&0xFF)) >>> 0;
+      return { w: w, h: h };
+    }
+    // JPEG: signature [0xFF,0xD8]; scan for SOF0/SOF1/SOF2 marker
+    if ((b[0] & 0xFF) === 0xFF && (b[1] & 0xFF) === 0xD8) {
+      let i = 2;
+      while (i < b.length - 8) {
+        if ((b[i] & 0xFF) !== 0xFF) { i++; continue; }
+        const marker = b[i + 1] & 0xFF;
+        if (marker === 0xC0 || marker === 0xC1 || marker === 0xC2) {
+          const h = ((b[i+5]&0xFF) << 8) | (b[i+6]&0xFF);
+          const w = ((b[i+7]&0xFF) << 8) | (b[i+8]&0xFF);
+          return { w: w, h: h };
+        }
+        const segLen = ((b[i+2]&0xFF) << 8) | (b[i+3]&0xFF);
+        i += 2 + segLen;
+      }
+    }
+  } catch (_) {}
+  return null;
 }
 
 /**
