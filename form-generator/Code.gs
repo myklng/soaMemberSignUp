@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.2';
+const VERSION = 'v1.1.3';
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -302,49 +302,34 @@ function getFileBlob_(folder, baseName) {
 }
 
 /**
- * Finds the paragraph or table cell in `body` containing `placeholder`,
- * clears it, and inserts `imageBlob` scaled to fit within maxW × maxH.
- * If no image blob is provided, the placeholder is simply removed.
- * If the placeholder is not found at all, this is a no-op.
+ * Uses body.findText() to locate `placeholder` anywhere in the document —
+ * body paragraphs, table cells, nested tables, all covered. Clears the
+ * containing paragraph or table cell and inserts `imageBlob` scaled to fit.
+ * If imageBlob is null the slot is simply cleared.
  */
 function replaceSlotWithImage_(body, placeholder, imageBlob, maxW, maxH) {
-  // Search top-level paragraphs
-  const paras = body.getParagraphs();
-  for (let i = 0; i < paras.length; i++) {
-    const para = paras[i];
-    if (para.getText().indexOf(placeholder) !== -1) {
-      para.clear();
-      if (imageBlob) {
-        const img = para.insertInlineImage(0, imageBlob);
-        scaleInlineImage_(img, maxW, maxH);
-      }
-      return;
+  const found = body.findText(escapeForRegex_(placeholder));
+  if (!found) return;
+
+  // Walk up from the matched Text element to find its Paragraph
+  const para       = found.getElement().getParent().asParagraph();
+  const paraParent = para.getParent();
+
+  if (paraParent.getType() === DocumentApp.ElementType.TABLE_CELL) {
+    const cell = paraParent.asTableCell();
+    cell.clear();
+    if (imageBlob) {
+      const newPara = cell.appendParagraph('');
+      const img     = newPara.insertInlineImage(0, imageBlob);
+      scaleInlineImage_(img, maxW, maxH);
+    }
+  } else {
+    para.clear();
+    if (imageBlob) {
+      const img = para.insertInlineImage(0, imageBlob);
+      scaleInlineImage_(img, maxW, maxH);
     }
   }
-
-  // Search table cells
-  const tables = body.getTables();
-  for (let t = 0; t < tables.length; t++) {
-    const table = tables[t];
-    for (let r = 0; r < table.getNumRows(); r++) {
-      const row = table.getRow(r);
-      for (let c = 0; c < row.getNumCells(); c++) {
-        const cell = row.getCell(c);
-        if (cell.getText().indexOf(placeholder) !== -1) {
-          cell.clear();
-          if (imageBlob) {
-            const para = cell.appendParagraph('');
-            const img  = para.insertInlineImage(0, imageBlob);
-            scaleInlineImage_(img, maxW, maxH);
-          }
-          return;
-        }
-      }
-    }
-  }
-
-  // Placeholder not found — remove via replaceText as a safety net
-  body.replaceText(escapeForRegex_(placeholder).replace(/\{/g, '\\{').replace(/\}/g, '\\}'), '');
 }
 
 /**
