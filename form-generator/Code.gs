@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.8';
+const VERSION = 'v1.1.9';
 
 // ─── Image size limits — edit values in centimetres ──────────────────────────
 // Maximum width / height an image is scaled down to fit. Never upscaled.
@@ -347,12 +347,11 @@ function replaceInContainer_(container, placeholder, imageBlob, maxW, maxH) {
         var parent = child.getParent();
         if (parent.getType() === DocumentApp.ElementType.TABLE_CELL) {
           var cell = parent.asTableCell();
-          var capW = getCellWidthPt_(cell, maxW);
           cell.clear();
           if (imageBlob) {
             var np  = cell.appendParagraph('');
             var img = np.insertInlineImage(0, imageBlob);
-            scaleInlineImage_(img, imageBlob, capW, maxH);
+            scaleInlineImage_(img, imageBlob, maxW, maxH);
           }
         } else {
           child.clear();
@@ -394,32 +393,17 @@ function replaceInTable_(table, placeholder, imageBlob, maxW, maxH) {
         }
       }
       if (matched) {
-        var capW = getCellWidthPt_(cell, maxW);
         cell.clear();
         if (imageBlob) {
           var np  = cell.appendParagraph('');
           var img = np.insertInlineImage(0, imageBlob);
-          scaleInlineImage_(img, imageBlob, capW, maxH);
+          scaleInlineImage_(img, imageBlob, maxW, maxH);
         }
       }
     }
   }
 }
 
-/**
- * Returns the column width of a cell in points (Google Docs pt = setWidth unit),
- * capped at defaultMax. Falls back to defaultMax if the width is unavailable.
- */
-function getCellWidthPt_(cell, defaultMax) {
-  try {
-    var row      = cell.getParentRow();
-    var colIndex = row.getChildIndex(cell);
-    if (colIndex < 0) return defaultMax;
-    var widthPt  = cell.getParentTable().getColumnWidth(colIndex);
-    if (widthPt > 0) return Math.min(defaultMax, widthPt);
-  } catch (_) {}
-  return defaultMax;
-}
 
 /**
  * Scales an InlineImage to fit within maxW × maxH, preserving aspect ratio.
