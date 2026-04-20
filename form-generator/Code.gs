@@ -18,7 +18,20 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.5';
+const VERSION = 'v1.1.6';
+
+// ─── Image size limits — edit values in centimetres ──────────────────────────
+// Maximum width / height an image is scaled down to fit. Never upscaled.
+// 1 cm ≈ 28.35 pts (Google Docs internal unit used by InlineImage.setWidth).
+const IMG_LIMITS = {
+  passport_photo:          { w: 3.5, h: 4.5 },
+  qualification_photocopy: { w: 14,  h: 10  },
+  payment_proof:           { w: 14,  h: 10  },
+  proposer_signature:      { w: 6,   h: 2.5 },
+  seconder_signature:      { w: 6,   h: 2.5 },
+  agreement_signature:     { w: 6,   h: 2.5 },
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -211,13 +224,16 @@ function generatePDF(recordId, prevFileId) {
 
     // File naming: {recordId}_{suffix}.{ext}
     // getFileBlob_() tries .png, .jpg, .jpeg in order.
-    const imageSlots = [
-      { placeholder: '{{img_passport_photo}}',  base: recordId + '_passport_photo',         maxW: 400, maxH: 500 },
-      { placeholder: '{{img_qual_photocopy}}',  base: recordId + '_qualification_photocopy', maxW: 800, maxH: 600 },
-      { placeholder: '{{img_payment_proof}}',   base: recordId + '_payment_proof',           maxW: 800, maxH: 600 },
-      { placeholder: '{{img_proposer_sig}}',    base: recordId + '_proposer_signature',      maxW: 400, maxH: 150 },
-      { placeholder: '{{img_seconder_sig}}',    base: recordId + '_seconder_signature',      maxW: 400, maxH: 150 },
-      { placeholder: '{{img_agreement_sig}}',   base: recordId + '_agreement_signature',     maxW: 400, maxH: 150 },
+    // Size limits are defined in IMG_LIMITS (cm) at the top of this file.
+    var CM = 72 / 2.54; // Google Docs pts per cm (setWidth/setHeight use pts)
+    var L  = IMG_LIMITS;
+    var imageSlots = [
+      { placeholder: '{{img_passport_photo}}',  base: recordId + '_passport_photo',          maxW: L.passport_photo.w          * CM, maxH: L.passport_photo.h          * CM },
+      { placeholder: '{{img_qual_photocopy}}',  base: recordId + '_qualification_photocopy', maxW: L.qualification_photocopy.w  * CM, maxH: L.qualification_photocopy.h  * CM },
+      { placeholder: '{{img_payment_proof}}',   base: recordId + '_payment_proof',           maxW: L.payment_proof.w            * CM, maxH: L.payment_proof.h            * CM },
+      { placeholder: '{{img_proposer_sig}}',    base: recordId + '_proposer_signature',      maxW: L.proposer_signature.w       * CM, maxH: L.proposer_signature.h       * CM },
+      { placeholder: '{{img_seconder_sig}}',    base: recordId + '_seconder_signature',      maxW: L.seconder_signature.w       * CM, maxH: L.seconder_signature.h       * CM },
+      { placeholder: '{{img_agreement_sig}}',   base: recordId + '_agreement_signature',     maxW: L.agreement_signature.w      * CM, maxH: L.agreement_signature.h      * CM },
     ];
 
     imageSlots.forEach(slot => {
@@ -302,60 +318,105 @@ function getFileBlob_(folder, baseName) {
 }
 
 /**
- * Searches body, header, and footer sections of `doc` for `placeholder`,
- * clears the containing paragraph or table cell, and inserts `imageBlob`
- * scaled to fit. If imageBlob is null the slot is simply cleared.
- * When the slot is inside a table cell, maxW is further capped to the
- * cell's actual column width so the image never overflows the cell.
+ * Entry point: searches body, header, and footer of `doc` for `placeholder`
+ * using explicit element traversal (getText().indexOf) rather than regex,
+ * so it works even when the placeholder spans multiple text runs or uses
+ * smart-quote variants of curly braces.
  */
 function replaceSlotWithImage_(doc, placeholder, imageBlob, maxW, maxH) {
-  const sections = [doc.getBody()];
-  try { const h = doc.getHeader(); if (h) sections.push(h); } catch (_) {}
-  try { const f = doc.getFooter(); if (f) sections.push(f); } catch (_) {}
-
-  const escaped = escapeForRegex_(placeholder);
+  var sections = [doc.getBody()];
+  try { var hdr = doc.getHeader(); if (hdr) sections.push(hdr); } catch (_) {}
+  try { var ftr = doc.getFooter(); if (ftr) sections.push(ftr); } catch (_) {}
   for (var si = 0; si < sections.length; si++) {
-    var section = sections[si];
-    var found = section.findText(escaped);
-    if (!found) continue;
-
-    var para       = found.getElement().getParent().asParagraph();
-    var paraParent = para.getParent();
-
-    if (paraParent.getType() === DocumentApp.ElementType.TABLE_CELL) {
-      var cell         = paraParent.asTableCell();
-      var effectiveMaxW = getCellWidthPx_(cell, maxW);
-      cell.clear();
-      if (imageBlob) {
-        var newPara = cell.appendParagraph('');
-        var img     = newPara.insertInlineImage(0, imageBlob);
-        scaleInlineImage_(img, imageBlob, effectiveMaxW, maxH);
-      }
-    } else {
-      para.clear();
-      if (imageBlob) {
-        var img2 = para.insertInlineImage(0, imageBlob);
-        scaleInlineImage_(img2, imageBlob, maxW, maxH);
-      }
-    }
-    return;
+    if (replaceInContainer_(sections[si], placeholder, imageBlob, maxW, maxH)) return;
   }
 }
 
 /**
- * Returns the column width of a table cell in pixels (96 dpi), capped at
- * defaultMaxW. Falls back to defaultMaxW if the width cannot be determined.
- * Google Docs column widths are in points (1 pt = 96/72 px at 96 dpi).
+ * Walks direct children of a section/container (body, header, footer).
+ * Handles PARAGRAPH, LIST_ITEM, and TABLE children.
  */
-function getCellWidthPx_(cell, defaultMaxW) {
+function replaceInContainer_(container, placeholder, imageBlob, maxW, maxH) {
+  var n = container.getNumChildren();
+  for (var i = 0; i < n; i++) {
+    var child = container.getChild(i);
+    var type  = child.getType();
+    if (type === DocumentApp.ElementType.PARAGRAPH ||
+        type === DocumentApp.ElementType.LIST_ITEM) {
+      if (child.getText().indexOf(placeholder) !== -1) {
+        var parent = child.getParent();
+        if (parent.getType() === DocumentApp.ElementType.TABLE_CELL) {
+          var cell = parent.asTableCell();
+          var capW = getCellWidthPt_(cell, maxW);
+          cell.clear();
+          if (imageBlob) {
+            var np  = cell.appendParagraph('');
+            var img = np.insertInlineImage(0, imageBlob);
+            scaleInlineImage_(img, imageBlob, capW, maxH);
+          }
+        } else {
+          child.clear();
+          if (imageBlob) {
+            var img2 = child.insertInlineImage(0, imageBlob);
+            scaleInlineImage_(img2, imageBlob, maxW, maxH);
+          }
+        }
+        return true;
+      }
+    } else if (type === DocumentApp.ElementType.TABLE) {
+      if (replaceInTable_(child.asTable(), placeholder, imageBlob, maxW, maxH)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Walks all rows → cells → paragraphs of a table, including nested tables.
+ */
+function replaceInTable_(table, placeholder, imageBlob, maxW, maxH) {
+  for (var r = 0; r < table.getNumRows(); r++) {
+    var row = table.getRow(r);
+    for (var c = 0; c < row.getNumCells(); c++) {
+      var cell = row.getCell(c);
+      var cn   = cell.getNumChildren();
+      for (var p = 0; p < cn; p++) {
+        var child = cell.getChild(p);
+        var type  = child.getType();
+        if (type === DocumentApp.ElementType.TABLE) {
+          if (replaceInTable_(child.asTable(), placeholder, imageBlob, maxW, maxH)) return true;
+          continue;
+        }
+        if ((type === DocumentApp.ElementType.PARAGRAPH ||
+             type === DocumentApp.ElementType.LIST_ITEM) &&
+            child.getText().indexOf(placeholder) !== -1) {
+          var capW = getCellWidthPt_(cell, maxW);
+          cell.clear();
+          if (imageBlob) {
+            var np  = cell.appendParagraph('');
+            var img = np.insertInlineImage(0, imageBlob);
+            scaleInlineImage_(img, imageBlob, capW, maxH);
+          }
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns the column width of a cell in points (Google Docs pt = setWidth unit),
+ * capped at defaultMax. Falls back to defaultMax if the width is unavailable.
+ */
+function getCellWidthPt_(cell, defaultMax) {
   try {
     var row      = cell.getParentRow();
     var colIndex = row.getChildIndex(cell);
-    if (colIndex < 0) return defaultMaxW;
+    if (colIndex < 0) return defaultMax;
     var widthPt  = cell.getParentTable().getColumnWidth(colIndex);
-    if (widthPt > 0) return Math.min(defaultMaxW, Math.floor(widthPt * 96 / 72));
+    if (widthPt > 0) return Math.min(defaultMax, widthPt);
   } catch (_) {}
-  return defaultMaxW;
+  return defaultMax;
 }
 
 /**
