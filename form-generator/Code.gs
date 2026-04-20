@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.6';
+const VERSION = 'v1.1.7';
 
 // ─── Image size limits — edit values in centimetres ──────────────────────────
 // Maximum width / height an image is scaled down to fit. Never upscaled.
@@ -430,7 +430,7 @@ function scaleInlineImage_(img, blob, maxW, maxH) {
   const w    = dims ? dims.w : img.getWidth();
   const h    = dims ? dims.h : img.getHeight();
   if (!w || !h) return;
-  const scale = Math.min(maxW / w, maxH / h, 1);
+  const scale = Math.min(maxW / w, maxH / h);
   img.setWidth(Math.round(w * scale));
   img.setHeight(Math.round(h * scale));
 }
