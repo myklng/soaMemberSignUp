@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.4';
+const VERSION = 'v1.1.5';
 
 // ─── Default credentials (override via Script Properties) ────────────────────
 // Change these before first deploy, or set APP_USERNAME / APP_PASSWORD in
@@ -222,7 +222,7 @@ function generatePDF(recordId, prevFileId) {
 
     imageSlots.forEach(slot => {
       const blob = getFileBlob_(folder, slot.base);
-      replaceSlotWithImage_(body, slot.placeholder, blob, slot.maxW, slot.maxH);
+      replaceSlotWithImage_(doc, slot.placeholder, blob, slot.maxW, slot.maxH);
     });
 
     // 4. Replace {{field_name}} text placeholders ───────────────────────────
@@ -302,34 +302,60 @@ function getFileBlob_(folder, baseName) {
 }
 
 /**
- * Uses body.findText() to locate `placeholder` anywhere in the document —
- * body paragraphs, table cells, nested tables, all covered. Clears the
- * containing paragraph or table cell and inserts `imageBlob` scaled to fit.
- * If imageBlob is null the slot is simply cleared.
+ * Searches body, header, and footer sections of `doc` for `placeholder`,
+ * clears the containing paragraph or table cell, and inserts `imageBlob`
+ * scaled to fit. If imageBlob is null the slot is simply cleared.
+ * When the slot is inside a table cell, maxW is further capped to the
+ * cell's actual column width so the image never overflows the cell.
  */
-function replaceSlotWithImage_(body, placeholder, imageBlob, maxW, maxH) {
-  const found = body.findText(escapeForRegex_(placeholder));
-  if (!found) return;
+function replaceSlotWithImage_(doc, placeholder, imageBlob, maxW, maxH) {
+  const sections = [doc.getBody()];
+  try { const h = doc.getHeader(); if (h) sections.push(h); } catch (_) {}
+  try { const f = doc.getFooter(); if (f) sections.push(f); } catch (_) {}
 
-  // Walk up from the matched Text element to find its Paragraph
-  const para       = found.getElement().getParent().asParagraph();
-  const paraParent = para.getParent();
+  const escaped = escapeForRegex_(placeholder);
+  for (var si = 0; si < sections.length; si++) {
+    var section = sections[si];
+    var found = section.findText(escaped);
+    if (!found) continue;
 
-  if (paraParent.getType() === DocumentApp.ElementType.TABLE_CELL) {
-    const cell = paraParent.asTableCell();
-    cell.clear();
-    if (imageBlob) {
-      const newPara = cell.appendParagraph('');
-      const img     = newPara.insertInlineImage(0, imageBlob);
-      scaleInlineImage_(img, imageBlob, maxW, maxH);
+    var para       = found.getElement().getParent().asParagraph();
+    var paraParent = para.getParent();
+
+    if (paraParent.getType() === DocumentApp.ElementType.TABLE_CELL) {
+      var cell         = paraParent.asTableCell();
+      var effectiveMaxW = getCellWidthPx_(cell, maxW);
+      cell.clear();
+      if (imageBlob) {
+        var newPara = cell.appendParagraph('');
+        var img     = newPara.insertInlineImage(0, imageBlob);
+        scaleInlineImage_(img, imageBlob, effectiveMaxW, maxH);
+      }
+    } else {
+      para.clear();
+      if (imageBlob) {
+        var img2 = para.insertInlineImage(0, imageBlob);
+        scaleInlineImage_(img2, imageBlob, maxW, maxH);
+      }
     }
-  } else {
-    para.clear();
-    if (imageBlob) {
-      const img = para.insertInlineImage(0, imageBlob);
-      scaleInlineImage_(img, imageBlob, maxW, maxH);
-    }
+    return;
   }
+}
+
+/**
+ * Returns the column width of a table cell in pixels (96 dpi), capped at
+ * defaultMaxW. Falls back to defaultMaxW if the width cannot be determined.
+ * Google Docs column widths are in points (1 pt = 96/72 px at 96 dpi).
+ */
+function getCellWidthPx_(cell, defaultMaxW) {
+  try {
+    var row      = cell.getParentRow();
+    var colIndex = row.getChildIndex(cell);
+    if (colIndex < 0) return defaultMaxW;
+    var widthPt  = cell.getParentTable().getColumnWidth(colIndex);
+    if (widthPt > 0) return Math.min(defaultMaxW, Math.floor(widthPt * 96 / 72));
+  } catch (_) {}
+  return defaultMaxW;
 }
 
 /**
