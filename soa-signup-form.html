@@ -1611,12 +1611,6 @@ async function initSignaturePads() {
     resizePad(cvs, pad);
   });
 
-  window.addEventListener('resize', () => {
-    $$('.soa-sigpad-canvas').forEach(cvs => {
-      if (signaturePads[cvs.id]) resizePad(cvs, signaturePads[cvs.id]);
-    });
-  });
-
   // Clear buttons
   $$('[data-clears-pad]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1627,11 +1621,9 @@ async function initSignaturePads() {
 }
 
 function resizePad(cvs, pad) {
-  const data  = pad.toData();
-  const ratio = Math.max(window.devicePixelRatio || 1, 1);
-  cvs.width   = cvs.offsetWidth  * ratio;
-  cvs.height  = cvs.offsetHeight * ratio;
-  cvs.getContext('2d').scale(ratio, ratio);
+  const data = pad.toData();
+  cvs.width  = 350;
+  cvs.height = 140;
   pad.clear();
   if (data && data.length) pad.fromData(data);
 }
