@@ -18,7 +18,7 @@
  *   Who has access : Anyone with Google Account
  */
 
-const VERSION = 'v1.1.7';
+const VERSION = 'v1.1.8';
 
 // ─── Image size limits — edit values in centimetres ──────────────────────────
 // Maximum width / height an image is scaled down to fit. Never upscaled.
@@ -328,7 +328,7 @@ function replaceSlotWithImage_(doc, placeholder, imageBlob, maxW, maxH) {
   try { var hdr = doc.getHeader(); if (hdr) sections.push(hdr); } catch (_) {}
   try { var ftr = doc.getFooter(); if (ftr) sections.push(ftr); } catch (_) {}
   for (var si = 0; si < sections.length; si++) {
-    if (replaceInContainer_(sections[si], placeholder, imageBlob, maxW, maxH)) return;
+    replaceInContainer_(sections[si], placeholder, imageBlob, maxW, maxH);
   }
 }
 
@@ -361,13 +361,12 @@ function replaceInContainer_(container, placeholder, imageBlob, maxW, maxH) {
             scaleInlineImage_(img2, imageBlob, maxW, maxH);
           }
         }
-        return true;
+        // continue — don't return, there may be more instances
       }
     } else if (type === DocumentApp.ElementType.TABLE) {
-      if (replaceInTable_(child.asTable(), placeholder, imageBlob, maxW, maxH)) return true;
+      replaceInTable_(child.asTable(), placeholder, imageBlob, maxW, maxH);
     }
   }
-  return false;
 }
 
 /**
@@ -379,29 +378,32 @@ function replaceInTable_(table, placeholder, imageBlob, maxW, maxH) {
     for (var c = 0; c < row.getNumCells(); c++) {
       var cell = row.getCell(c);
       var cn   = cell.getNumChildren();
+      var matched = false;
       for (var p = 0; p < cn; p++) {
         var child = cell.getChild(p);
         var type  = child.getType();
         if (type === DocumentApp.ElementType.TABLE) {
-          if (replaceInTable_(child.asTable(), placeholder, imageBlob, maxW, maxH)) return true;
+          replaceInTable_(child.asTable(), placeholder, imageBlob, maxW, maxH);
           continue;
         }
         if ((type === DocumentApp.ElementType.PARAGRAPH ||
              type === DocumentApp.ElementType.LIST_ITEM) &&
             child.getText().indexOf(placeholder) !== -1) {
-          var capW = getCellWidthPt_(cell, maxW);
-          cell.clear();
-          if (imageBlob) {
-            var np  = cell.appendParagraph('');
-            var img = np.insertInlineImage(0, imageBlob);
-            scaleInlineImage_(img, imageBlob, capW, maxH);
-          }
-          return true;
+          matched = true;
+          break; // stop scanning this cell's children — cell.clear() below invalidates them
+        }
+      }
+      if (matched) {
+        var capW = getCellWidthPt_(cell, maxW);
+        cell.clear();
+        if (imageBlob) {
+          var np  = cell.appendParagraph('');
+          var img = np.insertInlineImage(0, imageBlob);
+          scaleInlineImage_(img, imageBlob, capW, maxH);
         }
       }
     }
   }
-  return false;
 }
 
 /**
