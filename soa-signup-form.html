@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.4.1
+  Version : 1.4.2
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -596,20 +596,20 @@
     <div class="soa-section" id="s-sponsors">
       <h3 class="soa-section-hd">7 · Sponsors</h3>
       <div class="soa-alert soa-alert-info show">
-        Both your Proposer and Seconder must be current SOA members.
-        Start typing a name to search the SOA membership list.
+        Sponsors are <strong>optional</strong>. If your Proposer and/or Seconder is a current SOA member and is physically present to sign, fill in their details below. If they are not available to sign in person, leave this section blank — you may submit your application without sponsors.
+        <br /><br />
+        If a sponsor's name is entered, their signature is required.
       </div>
 
       <!-- Proposer -->
       <div class="soa-sub-hd">Proposer</div>
       <div class="soa-grid">
         <div class="soa-fg soa-col-8" id="fg-proposer_name">
-          <label class="soa-label" for="proposer_name">Full Name <span class="soa-req">*</span></label>
+          <label class="soa-label" for="proposer_name">Full Name</label>
           <div class="soa-ac-wrap">
             <input class="soa-input soa-ac-input" type="text" id="proposer_name" name="proposer_name"
-                   placeholder="Search SOA member list…"
-                   data-required="true" data-ac="sponsors"
-                   data-err-required="Proposer name is required."
+                   placeholder="Search SOA member list… (optional)"
+                   data-ac="sponsors"
                    autocomplete="off" />
             <div class="soa-ac-list" id="ac-proposer_name"></div>
           </div>
@@ -618,13 +618,11 @@
         <div class="soa-fg soa-col-4" id="fg-proposer_is_soa">
           <button type="button" class="soa-confirm-btn" id="btn-proposer_is_soa"
                   data-confirms="proposer_is_soa">Confirm: SOA Member</button>
-          <input type="hidden" id="proposer_is_soa" name="proposer_is_soa" value=""
-                 data-required="true"
-                 data-err-required="Please confirm the proposer is an SOA member." />
+          <input type="hidden" id="proposer_is_soa" name="proposer_is_soa" value="" />
           <span class="soa-err" id="err-proposer_is_soa"></span>
         </div>
         <div class="soa-fg soa-col-12" id="fg-proposer_sig">
-          <label class="soa-label">Proposer's Signature <span class="soa-req">*</span></label>
+          <label class="soa-label">Proposer's Signature</label>
           <div class="soa-sigpad-wrap" id="spw-proposer_sig">
             <canvas class="soa-sigpad-canvas" id="sp-proposer_sig" data-field="proposer_sig"></canvas>
             <div class="soa-sigpad-bar">
@@ -642,12 +640,11 @@
       <div class="soa-sub-hd">Seconder</div>
       <div class="soa-grid">
         <div class="soa-fg soa-col-8" id="fg-seconder_name">
-          <label class="soa-label" for="seconder_name">Full Name <span class="soa-req">*</span></label>
+          <label class="soa-label" for="seconder_name">Full Name</label>
           <div class="soa-ac-wrap">
             <input class="soa-input soa-ac-input" type="text" id="seconder_name" name="seconder_name"
-                   placeholder="Search SOA member list…"
-                   data-required="true" data-ac="sponsors"
-                   data-err-required="Seconder name is required."
+                   placeholder="Search SOA member list… (optional)"
+                   data-ac="sponsors"
                    autocomplete="off" />
             <div class="soa-ac-list" id="ac-seconder_name"></div>
           </div>
@@ -656,13 +653,11 @@
         <div class="soa-fg soa-col-4" id="fg-seconder_is_soa">
           <button type="button" class="soa-confirm-btn" id="btn-seconder_is_soa"
                   data-confirms="seconder_is_soa">Confirm: SOA Member</button>
-          <input type="hidden" id="seconder_is_soa" name="seconder_is_soa" value=""
-                 data-required="true"
-                 data-err-required="Please confirm the seconder is an SOA member." />
+          <input type="hidden" id="seconder_is_soa" name="seconder_is_soa" value="" />
           <span class="soa-err" id="err-seconder_is_soa"></span>
         </div>
         <div class="soa-fg soa-col-12" id="fg-seconder_sig">
-          <label class="soa-label">Seconder's Signature <span class="soa-req">*</span></label>
+          <label class="soa-label">Seconder's Signature</label>
           <div class="soa-sigpad-wrap" id="spw-seconder_sig">
             <canvas class="soa-sigpad-canvas" id="sp-seconder_sig" data-field="seconder_sig"></canvas>
             <div class="soa-sigpad-bar">
@@ -1071,11 +1066,31 @@ function validateAllFields() {
     if (!validateField(el)) ok = false;
   });
 
-  // Signature pads (skip pads inside hidden-mode sections)
+  // Signature pads (skip pads inside hidden-mode sections; sponsor sigs handled conditionally below)
   Object.keys(signaturePads).forEach(cid => {
     const canvas = $(cid);
     if (canvas && !isSectionVisible(canvas)) return;
+    if (cid === 'sp-proposer_sig' || cid === 'sp-seconder_sig') return;
     if (!validateSignature(cid)) ok = false;
+  });
+
+  // Sponsor fields — required only when a name is provided
+  ['proposer', 'seconder'].forEach(role => {
+    const nameEl  = $(role + '_name');
+    const isSoaEl = $(role + '_is_soa');
+    const nameVal = nameEl ? nameEl.value.trim() : '';
+    if (nameVal) {
+      if (!isSoaEl || !isSoaEl.value) {
+        setError(role + '_is_soa', 'Please confirm the ' + role + ' is an SOA member.');
+        ok = false;
+      } else {
+        clearError(role + '_is_soa');
+      }
+      if (!validateSignature('sp-' + role + '_sig')) ok = false;
+    } else {
+      clearError(role + '_is_soa');
+      clearError(role + '_sig');
+    }
   });
 
   return ok;
