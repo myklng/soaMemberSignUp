@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - soa-signup-form.html
+      - soa-signup-form.css
 
 jobs:
   bust-cache:
