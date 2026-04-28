@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.4.2
+  Version : 1.4.3
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -26,7 +26,7 @@
     <a href="#s-renewal-type" data-nav-mode="renewal">Renewal Type</a>
     <a href="#s-quals" data-nav-mode="new">3 · Qualifications</a>
     <a href="#s-membership" data-nav-mode="new">4 · Membership</a>
-    <a href="#s-payment">5 · Payment</a>
+    <a href="#s-payment" data-nav-mode="payment">5 · Payment</a>
     <a href="#s-photo">6 · Profile Pic</a>
     <a href="#s-sponsors" data-nav-mode="new">7 · Sponsors</a>
     <a href="#s-declaration">8 · Declaration</a>
@@ -271,8 +271,17 @@
             <input class="soa-tier-input" type="radio" name="form_mode"
                    id="fm-renewal" value="renewal" />
             <label class="soa-tier-card" for="fm-renewal">
-              <div class="soa-tier-name">Renewal / Update of Particulars</div>
-              <div class="soa-tier-desc">Renew your membership or update your personal details as an existing SOA member.</div>
+              <div class="soa-tier-name">Membership Renewal</div>
+              <div class="soa-tier-desc">Renew your annual membership as an existing SOA member.</div>
+            </label>
+          </div>
+
+          <div>
+            <input class="soa-tier-input" type="radio" name="form_mode"
+                   id="fm-update" value="update" />
+            <label class="soa-tier-card" for="fm-update">
+              <div class="soa-tier-name">Update of Particulars</div>
+              <div class="soa-tier-desc">Update your personal or contact details as an existing SOA member. No payment required.</div>
             </label>
           </div>
 
@@ -967,6 +976,18 @@ function validateField(el) {
   if (!isSectionVisible(el)) { clearError(el.id || el.name); return true; }
   const id = el.id || el.name;
 
+  // Update of Particulars: all fields optional (checkboxes still validated; pattern checks still run)
+  if (currentFormMode() === 'update' && el.type !== 'checkbox') {
+    const pat = el.dataset.pattern;
+    const v   = (el.value || '').trim();
+    if (pat && v && !new RegExp(pat).test(v)) {
+      setError(id, el.dataset.errPattern || 'Invalid format.');
+      return false;
+    }
+    clearError(id);
+    return true;
+  }
+
   // Conditional required
   const reqWhen = el.dataset.requiredWhen;
   if (reqWhen) {
@@ -1241,7 +1262,9 @@ function initFormTypeToggle() {
 
   function applyMode(mode) {
     wrapper.dataset.formMode = mode;
-    submitBtn.textContent = mode === 'renewal' ? 'Submit Renewal →' : 'Submit Application →';
+    if (mode === 'renewal') submitBtn.textContent = 'Submit Renewal →';
+    else if (mode === 'update') submitBtn.textContent = 'Submit Update →';
+    else submitBtn.textContent = 'Submit Application →';
 
     // Clear stale error states from sections now hidden by this mode change
     $$('.soa-section').forEach(section => {
@@ -1260,7 +1283,7 @@ function initFormTypeToggle() {
       $('fee-total').textContent = 'SGD —';
     } else {
       $('fee-membership-lbl').textContent = 'Membership Fee';
-      $('fee-hint').textContent = 'Select a membership type above to see the applicable fees.';
+      $('fee-hint').textContent = mode === 'update' ? 'No payment required for particulars update.' : 'Select a membership type above to see the applicable fees.';
       $('fee-entrance').textContent = 'SGD —';
       $('fee-membership').textContent = 'SGD —';
       $('fee-total').textContent = 'SGD —';
@@ -1720,6 +1743,18 @@ function collectPayload(signUpID) {
       addresses,
       renewal: { type: renewalType },
       payment: { renewal_fee: fees.fee, total: fees.fee, ...paymentRef },
+      declaration: { name: $('decl_name').value.trim(), agreed: $('decl_agree').checked },
+      files: collectFiles(),
+      submittedAt: new Date().toISOString(),
+    };
+  }
+
+  if (formMode === 'update') {
+    return {
+      formMode: 'update',
+      signUpID,
+      personal,
+      addresses,
       declaration: { name: $('decl_name').value.trim(), agreed: $('decl_agree').checked },
       files: collectFiles(),
       submittedAt: new Date().toISOString(),

@@ -61,7 +61,7 @@ const SHEET_HEADERS = [
 
 // Sheet C column order for renewal / update submissions
 const RENEWAL_HEADERS = [
-  'RenewalID', 'SubmittedAt',
+  'RenewalID', 'SubmittedAt', 'FormMode',
   // Personal
   'FullName_EN', 'FullName_ZH', 'DateOfBirth', 'NRIC', 'Citizenship', 'Email', 'OOB_Number',
   // Address
@@ -107,7 +107,7 @@ function doPost(e) {
     const fileUrls = saveFilesToDrive_(data.files || {}, signUpID, fullname_en);
 
     // 2. Route to the correct sheet based on form mode
-    if (data.formMode === 'renewal') {
+    if (data.formMode === 'renewal' || data.formMode === 'update') {
       appendRenewalToSheet_(data, fileUrls, signUpID);
     } else {
       appendToSheet_(data, fileUrls, signUpID);
@@ -364,6 +364,7 @@ function appendRenewalToSheet_(data, fileUrls, signUpID) {
   sheet.appendRow([
     signUpID,
     data.submittedAt || new Date().toISOString(),
+    data.formMode || 'renewal',
     // Personal
     p.fullname_en || '', p.fullname_zh || '', p.dob || '', p.nric || '',
     p.citizenship || '', p.email || '', p.oob || '',

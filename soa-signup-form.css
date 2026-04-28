@@ -547,16 +547,29 @@
 }
 
 /* ─── Form mode visibility ────────────────────────────────────────────────── */
-/* Default (new application): hide renewal-only sections */
+/* Renewal-only section: hidden by default, shown in renewal mode */
 #soaWrapper #s-renewal-type { display: none; }
-/* When renewal mode is active */
 #soaWrapper[data-form-mode="renewal"] #s-renewal-type { display: block; }
-#soaWrapper[data-form-mode="renewal"] #s-quals        { display: none; }
-#soaWrapper[data-form-mode="renewal"] #s-membership   { display: none; }
-#soaWrapper[data-form-mode="renewal"] #s-sponsors     { display: none; }
-#soaWrapper[data-form-mode="renewal"] #s-agreement    { display: none; }
+
+/* renewal mode: hide new-only sections */
+#soaWrapper[data-form-mode="renewal"] #s-quals      { display: none; }
+#soaWrapper[data-form-mode="renewal"] #s-membership { display: none; }
+#soaWrapper[data-form-mode="renewal"] #s-sponsors   { display: none; }
+#soaWrapper[data-form-mode="renewal"] #s-agreement  { display: none; }
+
+/* update mode: hide sections not relevant to a particulars update */
+#soaWrapper[data-form-mode="update"] #s-quals       { display: none; }
+#soaWrapper[data-form-mode="update"] #s-membership  { display: none; }
+#soaWrapper[data-form-mode="update"] #s-payment     { display: none; }
+#soaWrapper[data-form-mode="update"] #s-sponsors    { display: none; }
+#soaWrapper[data-form-mode="update"] #s-agreement   { display: none; }
+
 /* Nav link visibility per mode */
-#soaWrapper[data-form-mode="renewal"] #soaSecNav [data-nav-mode="new"]     { display: none; }
-#soaWrapper:not([data-form-mode="renewal"]) #soaSecNav [data-nav-mode="renewal"] { display: none; }
+#soaWrapper[data-form-mode="renewal"] #soaSecNav [data-nav-mode="new"]      { display: none; }
+#soaWrapper[data-form-mode="update"]  #soaSecNav [data-nav-mode="new"]      { display: none; }
+#soaWrapper[data-form-mode="new"]     #soaSecNav [data-nav-mode="renewal"]  { display: none; }
+#soaWrapper[data-form-mode="update"]  #soaSecNav [data-nav-mode="renewal"]  { display: none; }
+#soaWrapper[data-form-mode="update"]  #soaSecNav [data-nav-mode="payment"]  { display: none; }
+
 /* Entrance fee row hidden in renewal mode (no entrance fee) */
 #soaWrapper[data-form-mode="renewal"] .soa-fee-entrance-row { display: none; }
