@@ -16,6 +16,8 @@ jobs:
           STATUS=$(curl -s -o /tmp/bust_response.json -w "%{http_code}" \
             -X POST \
             -H "X-SOA-Secret: ${{ secrets.SOA_CACHE_BUST_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
             "${{ secrets.WP_SITE_URL }}/wp-json/soa/v1/bust-cache")
           echo "HTTP $STATUS — $(cat /tmp/bust_response.json)"
           [ "$STATUS" = "200" ] || exit 1
