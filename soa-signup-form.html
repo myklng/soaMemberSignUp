@@ -780,7 +780,7 @@
   <!-- Version badge -->
   <div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid var(--soa-border)">
     <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soa-muted);font-family:inherit">
-      <span style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em">v1.4.1</span>
+      <span id="soa-version-badge" style="background:var(--soa-primary);color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.04em"></span>
       SOA Membership Application Form
     </span>
   </div>
@@ -2120,6 +2120,13 @@ window.soaDebug = {
   },
 };
 console.log('[SOA] Debug tools ready. Try: soaDebug.checkConfig() | soaDebug.testConnection() | soaDebug.testPost()');
+
+// Auto-populate version badge from the HTML comment at the top of the file
+(function() {
+  const m  = document.documentElement.innerHTML.match(/Version\s*:\s*([\d.]+)/);
+  const el = document.getElementById('soa-version-badge');
+  if (m && el) el.textContent = 'v' + m[1];
+})();
 
 })(); // IIFE end
 </script>
