@@ -2125,8 +2125,23 @@ window.soaDebug = {
       console.error('[SOA] POST FAILED:', err.message);
     }
   },
+
+  async bustCache(secret) {
+    if (!secret) { console.warn('[SOA] Usage: soaDebug.bustCache("your-secret")'); return; }
+    try {
+      const r    = await fetch('/wp-json/soa/v1/bust-cache', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'X-SOA-Secret': secret },
+        body:    '{}',
+      });
+      const data = await r.json();
+      console.log('[SOA] Cache bust HTTP', r.status, '—', data);
+    } catch (err) {
+      console.error('[SOA] Cache bust failed:', err.message);
+    }
+  },
 };
-console.log('[SOA] Debug tools ready. Try: soaDebug.checkConfig() | soaDebug.testConnection() | soaDebug.testPost()');
+console.log('[SOA] Debug tools ready. Try: soaDebug.checkConfig() | soaDebug.testConnection() | soaDebug.testPost() | soaDebug.bustCache("secret")');
 
 // Auto-populate version badge from data-form-version attribute on #soaWrapper
 (function() {
