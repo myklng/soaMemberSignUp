@@ -1,6 +1,6 @@
 <!--
   SOA Singapore — Membership Application Form
-  Version : 1.4.3
+  Version : 1.4.4
   Embed   : [soa_signup_form] WordPress shortcode (see soa-form-shortcode.php)
   Submit  : POST JSON → Google Apps Script (see apps-script/Code.gs)
 
@@ -1946,7 +1946,7 @@ function initPhotoCropper() {
       updateZoomSlider(0);
       photoCropper = new Cropper(cropImg, {
         aspectRatio: 1,
-        viewMode: 3,              // image always fills crop box
+        viewMode: 1,              // crop box stays within canvas; canvas can shrink (allows zoom-out)
         dragMode: 'move',
         cropBoxMovable: false,
         cropBoxResizable: false,
@@ -1958,7 +1958,10 @@ function initPhotoCropper() {
         autoCropArea: 0.85,
         ready() {
           const id = photoCropper.getImageData();
-          photoMinZoom = id.width / id.naturalWidth;
+          const cd = photoCropper.getCropBoxData();
+          // Min zoom: image just covers the crop box (largest of the two fit ratios = cover)
+          photoMinZoom = Math.max(cd.width / id.naturalWidth, cd.height / id.naturalHeight);
+          photoCropper.zoomTo(photoMinZoom);
           // Inject L-shaped corner brackets to visualise the 1:1 square save area
           const cropBox = editor.querySelector('.cropper-crop-box');
           if (cropBox && !cropBox.querySelector('.soa-crop-corner')) {
@@ -1970,8 +1973,12 @@ function initPhotoCropper() {
           }
         },
         zoom(ev) {
-          // Sync slider on every zoom event (scroll, pinch, or slider).
-          // viewMode:3 already prevents zooming below the fill minimum.
+          // Prevent zooming below the cover minimum (image must fill the crop box).
+          if (ev.detail.ratio < photoMinZoom) {
+            ev.preventDefault();
+            photoCropper.zoomTo(photoMinZoom);
+            return;
+          }
           const t = Math.max(0, Math.min(3, (ev.detail.ratio / photoMinZoom) - 1));
           zoomSlider.value = t;
           updateZoomSlider(t);
