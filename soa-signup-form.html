@@ -17,7 +17,7 @@
 <!-- ============================================================
      MARKUP
      ============================================================ -->
-<div class="soa-form-wrapper" id="soaWrapper">
+<div class="soa-form-wrapper" id="soaWrapper" data-form-version="1.4.4">
 
   <!-- Section nav -->
   <nav class="soa-sec-nav" id="soaSecNav" aria-label="Jump to section">
@@ -2128,11 +2128,13 @@ window.soaDebug = {
 };
 console.log('[SOA] Debug tools ready. Try: soaDebug.checkConfig() | soaDebug.testConnection() | soaDebug.testPost()');
 
-// Auto-populate version badge from the HTML comment at the top of the file
+// Auto-populate version badge from data-form-version attribute on #soaWrapper
 (function() {
-  const m  = document.documentElement.innerHTML.match(/Version\s*:\s*([\d.]+)/);
-  const el = document.getElementById('soa-version-badge');
-  if (m && el) el.textContent = 'v' + m[1];
+  const wrapper = document.getElementById('soaWrapper');
+  const badge   = document.getElementById('soa-version-badge');
+  const version = wrapper ? wrapper.dataset.formVersion : null;
+  if (version && badge) badge.textContent = 'v' + version;
+  console.log('[SOA] Form version:', version || 'unknown');
 })();
 
 })(); // IIFE end
